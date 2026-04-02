@@ -179,7 +179,7 @@
             save();
             
             // 画面表示用のログ（日時の後に改行 \n を入れる）
-            const log = `[${getFullTime()}]\n${gearCode} / ${lure} / HIT! (当:${tCount} / 通:${total})\n`;
+            const log = `[${getFullTime()}]\n${gearCode} / ${lure} / 当:${tCount} \n`;
             document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
             
             updateUI(); renderLures();

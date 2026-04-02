@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>王禅寺LOG v1.7 Master-Sync</title>
+    <title>王禅寺LOG v1.8 Master-Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --recent: #ef4444; --lure: #065f46; --others: #475569; }
@@ -291,30 +291,36 @@
 
 
 
-    function resetToday() {
-            if(confirm("【警告】今日の釣果とログをリセットしますか？\n（通算マスタはスプレッドシートから再読み込みされます）")) {
-                // 1. 今日の統計を空にする
-                todayStats = {};
-                // 2. 今日の開始カウントを通算カウントに合わせる
-                totalS = total;
-                
-                // 3. ローカルストレージに保存
-                localStorage.setItem('oz-todayStats', JSON.stringify(todayStats));
-                localStorage.setItem('oz-totalS', totalS);
-                
-                // 4. ログ表示エリアを空にする
-                document.getElementById('log-display').innerText = "";
-                
-                // 5. ★最重要：スプレッドシートから最新マスタを強制ロード
-                loadMasterFromSheet();
-                
-                // 6. 表示を更新
-                updateUI();
-                renderLures();
-                
-                alert("リセット完了！最新マスタを同期しました。");
-            }
+function resetToday() {
+        if(confirm("【警告】ルアーリストと今日の釣果を完全に初期化しますか？\n（スプレッドシートから最新の状態を再取得します）")) {
+            
+            // 1. スマホ内の全データを一旦「空」にする（これが重要！）
+            stats = {}; 
+            todayStats = {};
+            recentStats = {};
+            
+            // 2. ローカルストレージも即座に空にする
+            localStorage.setItem('oz-stats', JSON.stringify(stats));
+            localStorage.setItem('oz-todayStats', JSON.stringify(todayStats));
+            localStorage.setItem('oz-recentStats', JSON.stringify(recentStats));
+
+            // 3. 通算カウントの開始地点を現在の合計に合わせる
+            totalS = total;
+            localStorage.setItem('oz-totalS', totalS);
+            
+            // 4. ログを消去
+            document.getElementById('log-display').innerText = "";
+            
+            // 5. ★真っさらな状態でシートから「今の正解」を読み込む
+            loadMasterFromSheet();
+            
+            // 6. 画面更新
+            updateUI();
+            renderLures();
+            
+            alert("大掃除完了！最新のマスタを読み込みました。");
         }
+    }
     </script>
 </body>
 </html>

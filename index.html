@@ -140,6 +140,22 @@
             });
         }
 
+
+
+// --- ここから差し替え ---
+        async function sendToGas(data) {
+            const url = "https://script.google.com/macros/s/AKfycbzB03jBYpGpDEWA8ki_1AdoI21v-n5x56u1pdrwoJYwB_-5VAJPZ__xZ9bkXGASsG4i9w/exec";
+            try {
+                // fetchでGASに送信（mode: 'no-cors' でブラウザ制限を回避）
+                fetch(url, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data)
+                });
+            } catch (e) { console.error("GAS送信失敗", e); }
+        }
+
         function rec(lure) {
             if (!gearCode) return;
             total++;
@@ -147,12 +163,29 @@
             if (!todayStats[gearCode]) todayStats[gearCode] = {};
             todayStats[gearCode][lure] = (todayStats[gearCode][lure] || 0) + 1;
             stats[gearCode][lure] = (stats[gearCode][lure] || 0) + 1;
+
+            // --- GAS送信用のデータ作成と実行 ---
+            const now = new Date();
+            const payload = {
+                date: `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')}`,
+                time: now.toLocaleTimeString(),
+                gear: gearCode,
+                lure: lure
+            };
+            sendToGas(payload); 
+            // ---------------------------------
+
             save();
             const log = `[${getFullTime()}] ${gearCode} / ${lure} / HIT!\n`;
             document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
             updateUI(); renderLures();
             if (window.navigator.vibrate) window.navigator.vibrate([20, 30]);
         }
+        // --- ここまで差し替え ---
+
+
+
+    
 
         function addL() {
             const i = document.getElementById('lure-input');

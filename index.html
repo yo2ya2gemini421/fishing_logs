@@ -129,3 +129,190 @@
                 let label = isPreset ? "PRESET" : (count + " 🐟");
                 createSlot(e, lure, label, `rank-${i+1}`, () => lure && rec(lure));
             }
+            createSlot(e, 'OTHERS', 'MASTER', 'rank-others', toggleMaster);
+        }
+
+        function createSlot(parent, name, label, cls, clickFn) {
+            const b = document.createElement('button');
+            b.className = `slot-btn ${cls}`;
+            b.innerHTML = name ? `<span class="truncate w-full px-1">${name}</span><small>${label}</small>` : '-';
+            b.onclick = clickFn;
+            parent.appendChild(b);
+        }
+
+        function toggleMaster() {
+            const p = document.getElementById('history-panel');
+            const list = document.getElementById('master-list');
+            list.innerHTML = '';
+            if (p.style.display === 'block') { p.style.display = 'none'; return; }
+            p.style.display = 'block';
+
+            let globalStats = {}; 
+            let globalToday = {}; 
+
+            Object.keys(stats).forEach(g => {
+                Object.keys(stats[g]).forEach(l => {
+                    globalStats[l] = (globalStats[l] || 0) + stats[g][l];
+                });
+            });
+
+            Object.keys(todayStats).forEach(g => {
+                Object.keys(todayStats[g]).forEach(l => {
+                    globalToday[l] = (globalToday[l] || 0) + todayStats[g][l];
+                });
+            });
+
+            const allLures = Object.keys(globalStats).sort((a, b) => globalStats[b] - globalStats[a]);
+
+            allLures.forEach(l => {
+                const b = document.createElement('button');
+                const tCount = globalToday[l] || 0;
+                const totalCount = globalStats[l] || 0;
+                b.className = 'bg-slate-700 p-2 rounded text-[10px] font-bold flex flex-col items-center border border-slate-600';
+                b.innerHTML = `
+                    <span class="truncate w-full text-center">${l}</span>
+                    <div class="flex gap-1 mt-1">
+                        <span class="${tCount > 0 ? 'text-cyan-400' : 'text-slate-400'} text-[8px]">${tCount}🐟</span>
+                        <span class="text-yellow-500 text-[8px] opacity-80">Σ${totalCount}</span>
+                    </div>
+                `;
+                b.onclick = () => { rec(l); p.style.display = 'none'; };
+                list.appendChild(b);
+            });
+        }
+
+        async function sendToGas(data) {
+            try {
+                fetch(GAS_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(data)
+                });
+            } catch (e) { console.error("GAS送信失敗", e); }
+        }
+
+        function rec(lure) {
+            if (!gearCode) return;
+            total++;
+            recentStats[gearCode] = lure;
+            if (!todayStats[gearCode]) todayStats[gearCode] = {};
+            todayStats[gearCode][lure] = (todayStats[gearCode][lure] || 0) + 1;
+            if (!stats[gearCode]) stats[gearCode] = {}; 
+            stats[gearCode][lure] = (stats[gearCode][lure] || 0) + 1;
+
+            const tCount = Math.max(0, total - totalS);
+            const now = new Date();
+            
+            const payload = {
+                date: `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')}`,
+                time: now.toLocaleTimeString(),
+                gear: gearCode,
+                lure: lure,
+                dayCount: tCount,
+                totalCount: total
+            };
+            
+            sendToGas(payload);
+            save();
+            
+            const log = `[${getFullTime()}] ${gearCode} / ${lure} / 当:${tCount} \n`;
+            document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
+            
+            updateUI(); renderLures();
+            if (window.navigator.vibrate) window.navigator.vibrate([20, 30]);
+        }
+
+        function addL() {
+            const i = document.getElementById('lure-input');
+            if (i.value.trim() && gearCode) { rec(i.value.trim()); i.value = ""; i.blur(); }
+        }
+
+        function updateUI() {
+            document.getElementById('today-count').innerText = Math.max(0, total - totalS);
+            document.getElementById('total-count').innerText = total;
+        }
+
+        function undo() {
+            const e = document.getElementById('log-display');
+            let t = e.innerText.trim().split('\n');
+            if (t.length > 0) {
+                const n = t.shift();
+                if (n.includes(' / ')) {
+                    total = Math.max(0, total - 1);
+                    const p = n.split('] ')[1].split(' / ');
+                    const g = p[0];
+                    const l = p[1];
+                    if (todayStats[g] && todayStats[g][l] > 0) todayStats[g][l]--;
+                    if (stats[g] && stats[g][l] > 0) stats[g][l]--;
+                }
+                e.innerText = t.join('\n') + (t.length > 0 ? '\n' : '');
+                save(); updateUI(); renderLures();
+            }
+        }
+
+        function save() {
+            localStorage.setItem('oz-stats', JSON.stringify(stats));
+            localStorage.setItem('oz-todayStats', JSON.stringify(todayStats));
+            localStorage.setItem('oz-total', total);
+            localStorage.setItem('oz-totalS', totalS);
+            localStorage.setItem('oz-recentStats', JSON.stringify(recentStats));
+
+            const masterPayload = {
+                type: "UPDATE_MASTER",
+                stats: stats
+            };
+            
+            fetch(GAS_URL, {
+                method: "POST",
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(masterPayload)
+            })
+            .then(() => console.log("Master Synced!"))
+            .catch(e => console.error("Error:", e));
+        }
+
+        function editTotal() {
+            const v = prompt("通算修正:", total);
+            if (v) { const n = parseInt(v); totalS += (n - total); total = n; save(); updateUI(); }
+        }
+
+        function copyLog() { navigator.clipboard.writeText(document.getElementById('log-display').innerText); alert("COPIED!"); }
+        
+        function addMemo() {
+            const m = prompt("MEMO:");
+            if(m) {
+                const log = `[${getFullTime()} MEMO] ${m}\n`;
+                document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
+            }
+        }
+
+
+
+    function resetToday() {
+            if(confirm("【警告】今日の釣果とログをリセットしますか？\n（通算マスタはスプレッドシートから再読み込みされます）")) {
+                // 1. 今日の統計を空にする
+                todayStats = {};
+                // 2. 今日の開始カウントを通算カウントに合わせる
+                totalS = total;
+                
+                // 3. ローカルストレージに保存
+                localStorage.setItem('oz-todayStats', JSON.stringify(todayStats));
+                localStorage.setItem('oz-totalS', totalS);
+                
+                // 4. ログ表示エリアを空にする
+                document.getElementById('log-display').innerText = "";
+                
+                // 5. ★最重要：スプレッドシートから最新マスタを強制ロード
+                loadMasterFromSheet();
+                
+                // 6. 表示を更新
+                updateUI();
+                renderLures();
+                
+                alert("リセット完了！最新マスタを同期しました。");
+            }
+        }
+    </script>
+</body>
+</html>

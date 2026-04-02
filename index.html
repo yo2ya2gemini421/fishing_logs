@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>王禅寺LOG v5.3 Minimal-Unit</title>
+    <title>王禅寺LOG v5.4 Spec-Label</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --btn-bg: #1e293b; --undo: #7f1d1d; --lure: #065f46; --reset: #334155; }
@@ -12,7 +12,6 @@
         .score-board { margin-bottom: 15px; border: 1px solid #334155; padding: 15px; border-radius: 16px; background: #1e293b; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); text-align: center; }
         .score-today { font-size: 32px; font-weight: 900; color: var(--accent); letter-spacing: -0.05em; }
         .grid-gear { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 15px; }
-        /* 機体ボタンを巨大化・シンプル化 */
         .gear-btn { height: 75px; border-radius: 12px; border: 2px solid #334155; font-weight: 900; background: var(--btn-bg); color: #fff; font-size: 28px; transition: all 0.1s; }
         .gear-btn.selected { background: var(--accent)!important; border-color: #fff; transform: scale(0.92); box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }
         .lure-btn { background: var(--lure); font-size: 13px; height: 55px; border-radius: 10px; font-weight: 700; border: none; color: white; }
@@ -34,11 +33,11 @@
     </div>
 
     <div class="grid-gear" id="gear-area">
-        <button onclick="selG(this,'v(1号機)')" class="gear-btn">V</button>
-        <button onclick="selG(this,'s(5号機)')" class="gear-btn">S</button>
-        <button onclick="selG(this,'e(8号機)')" class="gear-btn">E</button>
-        <button onclick="selG(this,'t(9号機)')" class="gear-btn">T</button>
-        <button onclick="selG(this,'a(12号機)')" class="gear-btn">A</button>
+        <button onclick="selG(this,'V','１号機 Vanquish')" class="gear-btn">V</button>
+        <button onclick="selG(this,'S','５号機 STELLA')" class="gear-btn">S</button>
+        <button onclick="selG(this,'E','８号機 EXIST SF')" class="gear-btn">E</button>
+        <button onclick="selG(this,'T','９号機 Twin Power')" class="gear-btn">T</button>
+        <button onclick="selG(this,'A','１２号機 Airity ST SF')" class="gear-btn">A</button>
     </div>
 
     <div id="lure-label" class="text-center text-xs font-bold mb-3 text-blue-400 uppercase tracking-widest">Select Unit</div>
@@ -64,7 +63,8 @@
         
         let total = parseInt(localStorage.getItem('oz-total')) || 391;
         let totalS = parseInt(localStorage.getItem('oz-totalS')) || total;
-        let gear = "";
+        let gearCode = ""; // V, S, E..
+        let gearFull = ""; // １号機 Vanquish..
         let stats = {};
 
         try {
@@ -72,11 +72,13 @@
             if(e) stats = JSON.parse(e);
         } catch(e) { stats = {}; }
 
-        function selG(e, t) {
+        function selG(e, code, full) {
             document.querySelectorAll('#gear-area button').forEach(b => b.classList.remove('selected'));
             e.classList.add('selected');
-            gear = t;
-            document.getElementById('lure-label').innerText = "⚡️ " + t.toUpperCase();
+            gearCode = code;
+            gearFull = full;
+            // 指定の文言を表示
+            document.getElementById('lure-label').innerText = "⚡️ " + full;
             renderLures();
             if (window.navigator.vibrate) window.navigator.vibrate(10);
         }
@@ -84,23 +86,23 @@
         function renderLures() {
             const e = document.getElementById('lure-area');
             e.innerHTML = '';
-            if (!gear) return;
-            if (!stats[gear]) stats[gear] = {};
-            Object.keys(stats[gear]).sort((a, b) => stats[gear][b] - stats[gear][a]).forEach(lure => {
+            if (!gearCode) return;
+            if (!stats[gearCode]) stats[gearCode] = {};
+            Object.keys(stats[gearCode]).sort((a, b) => stats[gearCode][b] - stats[gearCode][a]).forEach(lure => {
                 const n = document.createElement('button');
                 n.className = 'lure-btn';
-                n.innerHTML = `${lure}<small>${stats[gear][lure]} hits</small>`;
+                n.innerHTML = `${lure}<small>${stats[gearCode][lure]} hits</small>`;
                 n.onclick = () => rec(lure);
                 e.appendChild(n);
             });
         }
 
         function addL() {
-            if (!gear) { alert("機体を選んでね"); return; }
+            if (!gearCode) { alert("機体を選んでね"); return; }
             const i = document.getElementById('lure-input');
             const l = i.value.trim();
             if (l) {
-                if (!stats[gear][l]) stats[gear][l] = 0;
+                if (!stats[gearCode][l]) stats[gearCode][l] = 0;
                 rec(l);
                 i.value = "";
                 i.blur();
@@ -108,10 +110,10 @@
         }
 
         function rec(lureName) {
-            if (!gear) return;
+            if (!gearCode) return;
             total++;
-            if (!stats[gear][lureName]) stats[gear][lureName] = 0;
-            stats[gear][lureName]++;
+            if (!stats[gearCode][lureName]) stats[gearCode][lureName] = 0;
+            stats[gearCode][lureName]++;
             save();
             
             const t = document.getElementById('log-display');
@@ -120,7 +122,8 @@
                             now.getMinutes().toString().padStart(2, '0') + ":" + 
                             now.getSeconds().toString().padStart(2, '0');
             
-            t.innerText = `[${timeStr}] ${gear} / ${lureName} / HIT!\n` + t.innerText;
+            // ログには "V / ルアー名" の形式で記録
+            t.innerText = `[${timeStr}] ${gearCode} / ${lureName} / HIT!\n` + t.innerText;
             
             const btn = document.getElementById('send-btn');
             btn.innerText = "OK!";
@@ -171,7 +174,7 @@
                 if (n.includes('HIT!')) {
                     total = Math.max(0, total - 1);
                     const p = n.split(' / ');
-                    const g = p[0].split('] ')[1];
+                    const g = p[0].split('] ')[1]; // ログからgearCodeを抽出
                     const l = p[1];
                     if (stats[g] && stats[g][l] > 0) stats[g][l]--;
                 }

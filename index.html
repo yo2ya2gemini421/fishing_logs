@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>王禅寺LOG v1.6 Master-Sync</title>
+    <title>王禅寺LOG v1.7 Master-Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --recent: #ef4444; --lure: #065f46; --others: #475569; }
@@ -77,20 +77,22 @@
             try {
                 const response = await fetch(GAS_URL);
                 const remoteStats = await response.json();
+                
                 if (remoteStats && Object.keys(remoteStats).length > 0) {
-                    stats = remoteStats;
+                    // ★ここがゾンビ撃退の鍵！
+                    // スマホ側の古い stats を一度完全に空にしてから、シートのデータを入れる
+                    stats = remoteStats; 
+                    
+                    // ローカルストレージも「最新の正解」で上書き
                     localStorage.setItem('oz-stats', JSON.stringify(stats));
+                    
                     if(gearCode) renderLures(); 
-                    console.log("Master Synced from Sheet");
+                    console.log("スプレッドシートを正解として同期完了！");
                 }
-            } catch (e) { console.error("Load failed", e); }
+            } catch (e) { 
+                console.error("シートが読めないのでローカルデータを使います", e); 
+            }
         }
-
-        // ページ読み込み時に実行
-        window.onload = () => {
-            updateUI();
-            loadMasterFromSheet();
-        };
 
         function getFullTime() {
             const now = new Date();

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>王禅寺LOG v6.0 Gear-Linked-UI</title>
+    <title>王禅寺LOG v6.1 Full-Timestamp</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --recent: #ef4444; --lure: #065f46; --others: #475569; }
@@ -66,9 +66,20 @@
         let total = parseInt(localStorage.getItem('oz-total')) || 391;
         let totalS = parseInt(localStorage.getItem('oz-totalS')) || total;
         let gearCode = "";
-        let recentStats = JSON.parse(localStorage.getItem('oz-recentStats')) || {}; // 機体別RECENT
-        let stats = JSON.parse(localStorage.getItem('oz-stats')) || {}; // 通算
-        let todayStats = JSON.parse(localStorage.getItem('oz-todayStats')) || {}; // 当日
+        let recentStats = JSON.parse(localStorage.getItem('oz-recentStats')) || {};
+        let stats = JSON.parse(localStorage.getItem('oz-stats')) || {};
+        let todayStats = JSON.parse(localStorage.getItem('oz-todayStats')) || {};
+
+        function getFullTime() {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = (now.getMonth() + 1).toString().padStart(2, '0');
+            const d = now.getDate().toString().padStart(2, '0');
+            const h = now.getHours().toString().padStart(2, '0');
+            const i = now.getMinutes().toString().padStart(2, '0');
+            const s = now.getSeconds().toString().padStart(2, '0');
+            return `${y}/${m}/${d} ${h}:${i}:${s}`;
+        }
 
         function selG(e, code, full) {
             document.querySelectorAll('#gear-area button').forEach(b => b.classList.remove('selected'));
@@ -85,15 +96,10 @@
             if (!gearCode) return;
             if (!todayStats[gearCode]) todayStats[gearCode] = {};
             if (!stats[gearCode]) stats[gearCode] = {};
-
             let dailySorted = Object.keys(todayStats[gearCode]).sort((a, b) => todayStats[gearCode][b] - todayStats[gearCode][a]);
             let totalSorted = Object.keys(stats[gearCode]).sort((a, b) => stats[gearCode][b] - stats[gearCode][a]);
-
-            // スロット1: 機体別 RECENT
             const rLure = recentStats[gearCode] || "";
             createSlot(e, rLure, 'RECENT', 'rank-recent', () => rLure && rec(rLure));
-
-            // スロット2-4: 当日のTOP3 (いなければ通算)
             for (let i = 0; i < 3; i++) {
                 let lure = dailySorted[i] || totalSorted[i] || "";
                 let isPreset = !dailySorted[i] && totalSorted[i];
@@ -137,12 +143,12 @@
         function rec(lure) {
             if (!gearCode) return;
             total++;
-            recentStats[gearCode] = lure; // 機体別に保存
+            recentStats[gearCode] = lure;
             if (!todayStats[gearCode]) todayStats[gearCode] = {};
             todayStats[gearCode][lure] = (todayStats[gearCode][lure] || 0) + 1;
             stats[gearCode][lure] = (stats[gearCode][lure] || 0) + 1;
             save();
-            const log = `[${new Date().toLocaleTimeString()}] ${gearCode} / ${lure} / HIT!\n`;
+            const log = `[${getFullTime()}] ${gearCode} / ${lure} / HIT!\n`;
             document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
             updateUI(); renderLures();
             if (window.navigator.vibrate) window.navigator.vibrate([20, 30]);
@@ -185,7 +191,7 @@
         }
 
         function resetToday() {
-            if (confirm("今日の釣果とランキングをリセット？")) {
+            if (confirm("今日の記録をリセット？")) {
                 totalS = total; todayStats = {}; recentStats = {}; 
                 save(); updateUI(); renderLures();
             }
@@ -197,9 +203,13 @@
         }
 
         function copyLog() { navigator.clipboard.writeText(document.getElementById('log-display').innerText); alert("COPIED!"); }
+        
         function addMemo() {
             const m = prompt("MEMO:");
-            if(m) document.getElementById('log-display').innerText = `[${new Date().toLocaleTimeString()} MEMO] ${m}\n` + document.getElementById('log-display').innerText;
+            if(m) {
+                const log = `[${getFullTime()} MEMO] ${m}\n`;
+                document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
+            }
         }
 
         updateUI();

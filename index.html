@@ -169,10 +169,13 @@
             });
         }
 
+        // --- 1. URLの定義（最新のURLに差し替え） ---
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbx4gA69eRIEnPne0ovQEni9SioYncpiIwJjqkXLm3lzcnxrNFBrJLVajP5uNi4xHW4jkw/exec";
+
+        // --- 2. 既存の sendToGas 関数（URL変数を使うように修正） ---
         async function sendToGas(data) {
-            const url = "https://script.google.com/macros/s/AKfycbx4gA69eRIEnPne0ovQEni9SioYncpiIwJjqkXLm3lzcnxrNFBrJLVajP5uNi4xHW4jkw/exec";
             try {
-                fetch(url, {
+                fetch(GAS_URL, {
                     method: "POST",
                     mode: "no-cors",
                     headers: { "Content-Type": "application/json" },
@@ -222,14 +225,6 @@
             document.getElementById('total-count').innerText = total;
         }
 
-        function save() {
-            localStorage.setItem('oz-stats', JSON.stringify(stats));
-            localStorage.setItem('oz-todayStats', JSON.stringify(todayStats));
-            localStorage.setItem('oz-total', total);
-            localStorage.setItem('oz-totalS', totalS);
-            localStorage.setItem('oz-recentStats', JSON.stringify(recentStats));
-        }
-
         function undo() {
             const e = document.getElementById('log-display');
             let t = e.innerText.trim().split('\n');
@@ -248,6 +243,32 @@
             }
         }
 
+
+    // --- 3. save 関数をアップデート（マスタ同期機能を追加） ---
+        function save() {
+            localStorage.setItem('oz-stats', JSON.stringify(stats));
+            localStorage.setItem('oz-todayStats', JSON.stringify(todayStats));
+            localStorage.setItem('oz-total', total);
+            localStorage.setItem('oz-totalS', totalS);
+            localStorage.setItem('oz-recentStats', JSON.stringify(recentStats));
+
+            // 【新機能】保存のたびにLure_Masterシートも最新状態に同期する
+            // stats（全期間の機体別・ルアー別累計）をそのまま丸ごと投げる
+            const masterPayload = {
+                type: "UPDATE_MASTER",
+                stats: stats
+            };
+            
+            // 同期命令を送信
+            fetch(GAS_URL, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(masterPayload)
+            }).catch(e => console.error("マスタ同期エラー:", e));
+        }
+
+    
         function resetToday() {
             if (confirm("今日の記録をリセット？")) {
                 totalS = total; todayStats = {}; recentStats = {}; 

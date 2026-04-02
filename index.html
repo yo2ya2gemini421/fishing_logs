@@ -121,16 +121,22 @@
             if (p.style.display === 'block') { p.style.display = 'none'; return; }
             
             p.style.display = 'block';
-            const allLures = Object.keys(stats[gearCode] || {});
+            // 釣果が多い順に並び替え
+            const allLures = Object.keys(stats[gearCode] || {}).sort((a, b) => stats[gearCode][b] - stats[gearCode][a]);
+            
             allLures.forEach(l => {
                 const b = document.createElement('button');
-                b.className = 'bg-slate-700 p-2 rounded text-[10px] font-bold truncate';
-                b.innerText = l;
+                // マスタのボタンも2段構成で可愛く！
+                b.className = 'bg-slate-700 p-2 rounded text-[10px] font-bold flex flex-col items-center justify-center border border-slate-600 active:scale-95';
+                b.innerHTML = `<span class="truncate w-full text-center">${l}</span><span class="text-[8px] text-blue-300 mt-1">${stats[gearCode][l]} 🐟</span>`;
                 b.onclick = () => { rec(l); p.style.display = 'none'; };
                 list.appendChild(b);
             });
         }
 
+
+
+        
         function rec(lureName) {
             if (!gearCode) return;
             total++;

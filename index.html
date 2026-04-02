@@ -122,17 +122,33 @@
             const list = document.getElementById('master-list');
             list.innerHTML = '';
             if (p.style.display === 'block') { p.style.display = 'none'; return; }
+            
             p.style.display = 'block';
-            const all = Object.keys(stats[gearCode] || {}).sort((a, b) => stats[gearCode][b] - stats[gearCode][a]);
+            // 表示ロジック：今日釣れた順 ＞ 通算で釣れた順
+            const all = Object.keys(stats[gearCode] || {}).sort((a, b) => {
+                const dayA = todayStats[gearCode][a] || 0;
+                const dayB = todayStats[gearCode][b] || 0;
+                if (dayB !== dayA) return dayB - dayA;
+                return stats[gearCode][b] - stats[gearCode][a];
+            });
+
             all.forEach(l => {
                 const b = document.createElement('button');
+                const tCount = todayStats[gearCode][l] || 0; // 今日のカウント
                 b.className = 'bg-slate-700 p-2 rounded text-[10px] font-bold flex flex-col items-center border border-slate-600';
-                b.innerHTML = `<span class="truncate w-full text-center">${l}</span><span class="text-[8px] text-blue-300 mt-1">${stats[gearCode][l]}🐟</span>`;
+                // 今日の釣果がある場合は青く強調して「本日分」を出す！
+                b.innerHTML = `<span class="truncate w-full text-center">${l}</span>
+                               <span class="text-[8px] ${tCount > 0 ? 'text-cyan-400' : 'text-slate-400'} mt-1">
+                               ${tCount} 🐟 (今日)</span>`;
                 b.onclick = () => { rec(l); p.style.display = 'none'; };
                 list.appendChild(b);
             });
         }
 
+
+
+
+        
         function rec(lure) {
             if (!gearCode) return;
             total++;

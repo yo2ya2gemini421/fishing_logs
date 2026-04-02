@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>王禅寺LOG v1.1 Full-Timestamp</title>
+    <title>王禅寺LOG v1.2 Full-Timestamp</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --recent: #ef4444; --lure: #065f46; --others: #475569; }
@@ -62,7 +62,10 @@
         <button onclick="addMemo()" class="h-10 rounded-lg bg-indigo-700 font-bold text-[10px]">MEMO</button>
     </div>
 
-    <script>
+
+
+
+<script>
         let total = parseInt(localStorage.getItem('oz-total')) || 391;
         let totalS = parseInt(localStorage.getItem('oz-totalS')) || total;
         let gearCode = "";
@@ -118,31 +121,54 @@
             parent.appendChild(b);
         }
 
+        // --- アップデート：ルアー軸の全期間集計表示 ---
         function toggleMaster() {
             const p = document.getElementById('history-panel');
             const list = document.getElementById('master-list');
             list.innerHTML = '';
             if (p.style.display === 'block') { p.style.display = 'none'; return; }
             p.style.display = 'block';
-            const all = Object.keys(stats[gearCode] || {}).sort((a, b) => {
-                const dayA = todayStats[gearCode][a] || 0;
-                const dayB = todayStats[gearCode][b] || 0;
-                if (dayB !== dayA) return dayB - dayA;
-                return stats[gearCode][b] - stats[gearCode][a];
+
+            // 全機体からルアーごとにデータを合算
+            let globalStats = {}; // 全期間累計
+            let globalToday = {}; // 今日累計
+
+            // stats（全期間）から集計
+            Object.keys(stats).forEach(g => {
+                Object.keys(stats[g]).forEach(l => {
+                    globalStats[l] = (globalStats[l] || 0) + stats[g][l];
+                });
             });
-            all.forEach(l => {
+
+            // todayStats（今日）から集計
+            Object.keys(todayStats).forEach(g => {
+                Object.keys(todayStats[g]).forEach(l => {
+                    globalToday[l] = (globalToday[l] || 0) + todayStats[g][l];
+                });
+            });
+
+            // 累計数が多い順にソート
+            const allLures = Object.keys(globalStats).sort((a, b) => globalStats[b] - globalStats[a]);
+
+            allLures.forEach(l => {
                 const b = document.createElement('button');
-                const tCount = todayStats[gearCode][l] || 0;
+                const tCount = globalToday[l] || 0;
+                const totalCount = globalStats[l] || 0;
+
                 b.className = 'bg-slate-700 p-2 rounded text-[10px] font-bold flex flex-col items-center border border-slate-600';
-                b.innerHTML = `<span class="truncate w-full text-center">${l}</span><span class="text-[8px] ${tCount > 0 ? 'text-cyan-400' : 'text-slate-400'} mt-1">${tCount} 🐟 (今日)</span>`;
+                // HTML構造：上段にルアー名、下段に今日(🐟)と累計(Σ)を表示
+                b.innerHTML = `
+                    <span class="truncate w-full text-center">${l}</span>
+                    <div class="flex gap-1 mt-1">
+                        <span class="${tCount > 0 ? 'text-cyan-400' : 'text-slate-400'} text-[8px]">${tCount}🐟</span>
+                        <span class="text-yellow-500 text-[8px] opacity-80">Σ${totalCount}</span>
+                    </div>
+                `;
                 b.onclick = () => { rec(l); p.style.display = 'none'; };
                 list.appendChild(b);
             });
         }
 
-
-
-        // --- 最新のURLに差し替え済み ---
         async function sendToGas(data) {
             const url = "https://script.google.com/macros/s/AKfycbx4gA69eRIEnPne0ovQEni9SioYncpiIwJjqkXLm3lzcnxrNFBrJLVajP5uNi4xHW4jkw/exec";
             try {
@@ -161,6 +187,7 @@
             recentStats[gearCode] = lure;
             if (!todayStats[gearCode]) todayStats[gearCode] = {};
             todayStats[gearCode][lure] = (todayStats[gearCode][lure] || 0) + 1;
+            if (!stats[gearCode]) stats[gearCode] = {}; // 未定義ガード
             stats[gearCode][lure] = (stats[gearCode][lure] || 0) + 1;
 
             const tCount = Math.max(0, total - totalS);
@@ -178,21 +205,12 @@
             sendToGas(payload);
             save();
             
-            // 画面表示用のログ（日時の後に改行 \n を入れる）
             const log = `[${getFullTime()}] ${gearCode} / ${lure} / 当:${tCount} \n`;
             document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
             
             updateUI(); renderLures();
             if (window.navigator.vibrate) window.navigator.vibrate([20, 30]);
-
-
-
         }
-
-
-
-
-    
 
         function addL() {
             const i = document.getElementById('lure-input');
@@ -217,10 +235,10 @@
             let t = e.innerText.trim().split('\n');
             if (t.length > 0) {
                 const n = t.shift();
-                if (n.includes('HIT!')) {
+                if (n.includes(' / ')) { // フォーマットに合わせて修正
                     total = Math.max(0, total - 1);
-                    const p = n.split(' / ');
-                    const g = p[0].split('] ')[1];
+                    const p = n.split('] ')[1].split(' / ');
+                    const g = p[0];
                     const l = p[1];
                     if (todayStats[g] && todayStats[g][l] > 0) todayStats[g][l]--;
                     if (stats[g] && stats[g][l] > 0) stats[g][l]--;
@@ -254,5 +272,11 @@
 
         updateUI();
     </script>
+
+
+
+
+
+    
 </body>
 </html>

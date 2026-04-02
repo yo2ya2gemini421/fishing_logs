@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>王禅寺 釣果LOG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .gear-btn.active { border-color: #3b82f6; background-color: #1e3a8a; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+        .tap-effect:active { transform: scale(0.95); }
+    </style>
+</head>
+<body class="p-4 select-none">
+    <div class="max-w-md mx-auto">
+        <header class="flex justify-between items-center mb-6 border-b border-slate-700 pb-2">
+            <h1 class="text-xl font-black text-blue-400 tracking-tighter">OZENJI DIGI-LOG</h1>
+            <div id="clock" class="text-lg font-mono font-bold text-slate-400">00:00:00</div>
+        </header>
+
+        <section class="mb-6">
+            <div class="flex justify-between items-center mb-3">
+                <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Select Unit</label>
+                <span id="selected-label" class="text-xs text-blue-400 font-bold">V(1号機) Selected</span>
+            </div>
+            <div class="grid grid-cols-4 gap-3">
+                <button onclick="setGear('v', 1, this)" class="gear-btn active tap-effect bg-slate-800 p-4 rounded-xl text-2xl font-black border-2 border-slate-700">V</button>
+                <button onclick="setGear('s', 5, this)" class="gear-btn tap-effect bg-slate-800 p-4 rounded-xl text-2xl font-black border-2 border-slate-700">S</button>
+                <button onclick="setGear('t', 9, this)" class="gear-btn tap-effect bg-slate-800 p-4 rounded-xl text-2xl font-black border-2 border-slate-700">T</button>
+                <button onclick="setGear('e', 8, this)" class="gear-btn tap-effect bg-slate-800 p-4 rounded-xl text-2xl font-black border-2 border-slate-700">E</button>
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Hit Lure</label>
+            <input type="text" id="lureName" 
+                class="w-full bg-slate-900 p-5 rounded-2xl text-xl font-bold border-2 border-slate-700 focus:border-blue-500 focus:outline-none transition-all" 
+                placeholder="ルアー名を入力..." 
+                inputmode="text">
+            
+            <div class="grid grid-cols-3 gap-2 mt-4">
+                <button onclick="quick('Xスティック')" class="bg-slate-800 py-3 rounded-lg text-sm font-bold tap-effect border border-slate-700">Xスティック</button>
+                <button onclick="quick('レイゲン')" class="bg-slate-800 py-3 rounded-lg text-sm font-bold tap-effect border border-slate-700">レイゲン</button>
+                <button onclick="quick('ダンゴウオ')" class="bg-slate-800 py-3 rounded-lg text-sm font-bold tap-effect border border-slate-700">ダンゴウオ</button>
+            </div>
+        </section>
+
+        <button onclick="send()" id="sendBtn" class="w-full bg-blue-600 hover:bg-blue-500 py-8 rounded-3xl text-3xl font-black shadow-2xl shadow-blue-900/20 transition-all active:bg-blue-800 tap-effect">
+            FISH ON !
+        </button>
+
+        <div id="msg" class="mt-6 text-center font-bold text-slate-500"></div>
+    </div>
+
+    <script>
+        const ENDPOINT = "https://script.google.com/macros/s/AKfycbzRAzj6rW9h-dqX45Uy8x-KTrBuEYUhvHy4VeC-vtQX8jFkw3W-9xj9v-6jQzOA9PZ4Bw/exec";
+        let gear = "v(1号機)";
+
+        function setGear(id, num, el) {
+            gear = `${id}(${num}号機)`;
+            document.getElementById('selected-label').innerText = gear.toUpperCase() + " Selected";
+            document.querySelectorAll('.gear-btn').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            if (window.navigator.vibrate) window.navigator.vibrate(10);
+        }
+
+        function quick(val) { 
+            document.getElementById('lureName').value = val;
+            if (window.navigator.vibrate) window.navigator.vibrate(5);
+        }
+
+        async function send() {
+            const lure = document.getElementById('lureName').value;
+            if (!lure) return alert("ルアー名を入れて！");
+
+            const btn = document.getElementById('sendBtn');
+            const msg = document.getElementById('msg');
+
+            btn.disabled = true;
+            btn.classList.replace('bg-blue-600', 'bg-slate-700');
+            msg.innerText = "⚡ 送信中...";
+
+            try {
+                // GASへのPOST
+                await fetch(ENDPOINT, {
+                    method: "POST",
+                    mode: "no-cors", // CORS回避
+                    body: JSON.stringify({
+                        action: 'log',
+                        userId: 'yochan',
+                        gear: gear,
+                        lureName: lure,
+                        total: 1
+                    })
+                });
+
+                msg.innerText = "✅ 記録完了！スプレッドシートを確認せよ";
+                if (window.navigator.vibrate) window.navigator.vibrate([30, 50, 30]);
+                document.getElementById('lureName').value = "";
+            } catch (e) {
+                msg.innerText = "❌ 送信失敗。電波ある？";
+            } finally {
+                btn.disabled = false;
+                btn.classList.replace('bg-slate-700', 'bg-blue-600');
+                setTimeout(() => { msg.innerText = ""; }, 3000);
+            }
+        }
+
+        setInterval(() => {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('ja-JP', {hour12:false});
+        }, 1000);
+    </script>
+</body>
+</html>

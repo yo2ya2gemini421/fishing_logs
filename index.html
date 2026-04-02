@@ -178,11 +178,15 @@
             sendToGas(payload);
             save();
             
-            const log = `[${getFullTime()}] ${gearCode} / ${lure} / HIT! (当:${tCount} / 通:${total})\n`;
+            // 画面表示用のログ（日時の後に改行 \n を入れる）
+            const log = `[${getFullTime()}]\n${gearCode} / ${lure} / HIT! (当:${tCount} / 通:${total})\n\n`;
             document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
             
             updateUI(); renderLures();
             if (window.navigator.vibrate) window.navigator.vibrate([20, 30]);
+
+
+
         }
 
 

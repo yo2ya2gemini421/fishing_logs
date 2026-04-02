@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>王禅寺LOG v5.8 Day-One-System</title>
+    <title>王禅寺LOG v6.0 Gear-Linked-UI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --recent: #ef4444; --lure: #065f46; --others: #475569; }
@@ -13,7 +13,6 @@
         .grid-gear { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px; }
         .gear-btn { height: 75px; border-radius: 12px; border: 2px solid #334155; font-weight: 900; background: #1e293b; color: #fff; font-size: 28px; }
         .gear-btn.selected { background: var(--accent)!important; border-color: #fff; transform: scale(0.92); }
-        
         .lure-slot-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 12px; }
         .slot-btn { height: 70px; border-radius: 10px; border: none; color: white; font-weight: 800; font-size: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; }
         .slot-btn small { font-size: 8px; opacity: 0.7; margin-top: 2px; }
@@ -21,7 +20,6 @@
         .rank-1 { background: #b45309; }
         .rank-2, .rank-3 { background: var(--lure); }
         .rank-others { background: var(--others); }
-
         #history-panel { display: none; background: #1e293b; border-radius: 12px; padding: 10px; margin-bottom: 12px; border: 1px solid var(--others); }
         #log-display { width: 100%; height: 140px; background: #000; color: #4ade80; font-family: monospace; font-size: 11px; padding: 10px; overflow-y: auto; border-radius: 8px; margin-bottom: 12px; }
         .input-area { display: flex; gap: 8px; margin-bottom: 12px; padding: 8px; background: #1e293b; border-radius: 12px; }
@@ -68,7 +66,7 @@
         let total = parseInt(localStorage.getItem('oz-total')) || 391;
         let totalS = parseInt(localStorage.getItem('oz-totalS')) || total;
         let gearCode = "";
-        let recentLure = localStorage.getItem('oz-recent') || "";
+        let recentStats = JSON.parse(localStorage.getItem('oz-recentStats')) || {}; // 機体別RECENT
         let stats = JSON.parse(localStorage.getItem('oz-stats')) || {}; // 通算
         let todayStats = JSON.parse(localStorage.getItem('oz-todayStats')) || {}; // 当日
 
@@ -88,13 +86,12 @@
             if (!todayStats[gearCode]) todayStats[gearCode] = {};
             if (!stats[gearCode]) stats[gearCode] = {};
 
-            // 当日釣果順
             let dailySorted = Object.keys(todayStats[gearCode]).sort((a, b) => todayStats[gearCode][b] - todayStats[gearCode][a]);
-            // 通算釣果順（予備用）
             let totalSorted = Object.keys(stats[gearCode]).sort((a, b) => stats[gearCode][b] - stats[gearCode][a]);
 
-            // スロット1: RECENT
-            createSlot(e, recentLure, 'RECENT', 'rank-recent', () => recentLure && rec(recentLure));
+            // スロット1: 機体別 RECENT
+            const rLure = recentStats[gearCode] || "";
+            createSlot(e, rLure, 'RECENT', 'rank-recent', () => rLure && rec(rLure));
 
             // スロット2-4: 当日のTOP3 (いなければ通算)
             for (let i = 0; i < 3; i++) {
@@ -104,8 +101,6 @@
                 let label = isPreset ? "PRESET" : (count + " 🐟");
                 createSlot(e, lure, label, `rank-${i+1}`, () => lure && rec(lure));
             }
-
-            // スロット5: OTHERS
             createSlot(e, 'OTHERS', 'MASTER', 'rank-others', toggleMaster);
         }
 
@@ -122,37 +117,27 @@
             const list = document.getElementById('master-list');
             list.innerHTML = '';
             if (p.style.display === 'block') { p.style.display = 'none'; return; }
-            
             p.style.display = 'block';
-            // 表示ロジック：今日釣れた順 ＞ 通算で釣れた順
             const all = Object.keys(stats[gearCode] || {}).sort((a, b) => {
                 const dayA = todayStats[gearCode][a] || 0;
                 const dayB = todayStats[gearCode][b] || 0;
                 if (dayB !== dayA) return dayB - dayA;
                 return stats[gearCode][b] - stats[gearCode][a];
             });
-
             all.forEach(l => {
                 const b = document.createElement('button');
-                const tCount = todayStats[gearCode][l] || 0; // 今日のカウント
+                const tCount = todayStats[gearCode][l] || 0;
                 b.className = 'bg-slate-700 p-2 rounded text-[10px] font-bold flex flex-col items-center border border-slate-600';
-                // 今日の釣果がある場合は青く強調して「本日分」を出す！
-                b.innerHTML = `<span class="truncate w-full text-center">${l}</span>
-                               <span class="text-[8px] ${tCount > 0 ? 'text-cyan-400' : 'text-slate-400'} mt-1">
-                               ${tCount} 🐟 (今日)</span>`;
+                b.innerHTML = `<span class="truncate w-full text-center">${l}</span><span class="text-[8px] ${tCount > 0 ? 'text-cyan-400' : 'text-slate-400'} mt-1">${tCount} 🐟 (今日)</span>`;
                 b.onclick = () => { rec(l); p.style.display = 'none'; };
                 list.appendChild(b);
             });
         }
 
-
-
-
-        
         function rec(lure) {
             if (!gearCode) return;
             total++;
-            recentLure = lure;
+            recentStats[gearCode] = lure; // 機体別に保存
             if (!todayStats[gearCode]) todayStats[gearCode] = {};
             todayStats[gearCode][lure] = (todayStats[gearCode][lure] || 0) + 1;
             stats[gearCode][lure] = (stats[gearCode][lure] || 0) + 1;
@@ -178,7 +163,7 @@
             localStorage.setItem('oz-todayStats', JSON.stringify(todayStats));
             localStorage.setItem('oz-total', total);
             localStorage.setItem('oz-totalS', totalS);
-            localStorage.setItem('oz-recent', recentLure);
+            localStorage.setItem('oz-recentStats', JSON.stringify(recentStats));
         }
 
         function undo() {
@@ -200,28 +185,21 @@
         }
 
         function resetToday() {
-            if (confirm("当日の釣果とランキングをリセットしますか？")) {
-                totalS = total; todayStats = {}; recentLure = "";
+            if (confirm("今日の釣果とランキングをリセット？")) {
+                totalS = total; todayStats = {}; recentStats = {}; 
                 save(); updateUI(); renderLures();
             }
         }
 
         function editTotal() {
-            const v = prompt("修正後の通算釣果:", total);
+            const v = prompt("通算修正:", total);
             if (v) { const n = parseInt(v); totalS += (n - total); total = n; save(); updateUI(); }
         }
 
-        function copyLog() {
-            navigator.clipboard.writeText(document.getElementById('log-display').innerText);
-            alert("LOG COPIED!");
-        }
-
+        function copyLog() { navigator.clipboard.writeText(document.getElementById('log-display').innerText); alert("COPIED!"); }
         function addMemo() {
             const m = prompt("MEMO:");
-            if(m) {
-                const log = `[${new Date().toLocaleTimeString()} MEMO] ${m}\n`;
-                document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
-            }
+            if(m) document.getElementById('log-display').innerText = `[${new Date().toLocaleTimeString()} MEMO] ${m}\n` + document.getElementById('log-display').innerText;
         }
 
         updateUI();

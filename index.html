@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>王禅寺LOG v1.3 Full-Timestamp</title>
+    <title>王禅寺LOG v1.4 Full-Timestamp</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --recent: #ef4444; --lure: #065f46; --others: #475569; }
@@ -244,7 +244,6 @@
         }
 
 
-    // --- 3. save 関数をアップデート（マスタ同期機能を追加） ---
         function save() {
             localStorage.setItem('oz-stats', JSON.stringify(stats));
             localStorage.setItem('oz-todayStats', JSON.stringify(todayStats));
@@ -252,28 +251,22 @@
             localStorage.setItem('oz-totalS', totalS);
             localStorage.setItem('oz-recentStats', JSON.stringify(recentStats));
 
-            // 【新機能】保存のたびにLure_Masterシートも最新状態に同期する
-            // stats（全期間の機体別・ルアー別累計）をそのまま丸ごと投げる
+            // マスタ更新用のパケット
             const masterPayload = {
                 type: "UPDATE_MASTER",
                 stats: stats
             };
             
-            // 同期命令を送信
+            // --- ここを修正！ ---
             fetch(GAS_URL, {
                 method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    'Content-Type': 'text/plain', // JSONではなく敢えてtextにするのがGASのコツ
+                },
                 body: JSON.stringify(masterPayload)
-            }).catch(e => console.error("マスタ同期エラー:", e));
-        }
-
-    
-        function resetToday() {
-            if (confirm("今日の記録をリセット？")) {
-                totalS = total; todayStats = {}; recentStats = {}; 
-                save(); updateUI(); renderLures();
-            }
+            })
+            .then(() => console.log("Master Synced!"))
+            .catch(e => console.error("Error:", e));
         }
 
         function editTotal() {

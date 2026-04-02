@@ -155,7 +155,6 @@
             } catch (e) { console.error("GAS送信失敗", e); }
         }
 
-        // --- カウント情報を付与した rec 関数 ---
         function rec(lure) {
             if (!gearCode) return;
             total++;
@@ -164,30 +163,27 @@
             todayStats[gearCode][lure] = (todayStats[gearCode][lure] || 0) + 1;
             stats[gearCode][lure] = (stats[gearCode][lure] || 0) + 1;
 
-            const tCount = Math.max(0, total - totalS); // 当日の釣果
+            const tCount = Math.max(0, total - totalS);
             const now = new Date();
             
-            // GASに送るリッチなデータセット
             const payload = {
                 date: `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')}`,
                 time: now.toLocaleTimeString(),
                 gear: gearCode,
                 lure: lure,
-                dayCount: tCount,   // GAS側の F列へ
-                totalCount: total   // GAS側の G列へ
+                dayCount: tCount,
+                totalCount: total
             };
+            
             sendToGas(payload);
-
             save();
             
-            // アプリ上のログ表示もアップデート！
             const log = `[${getFullTime()}] ${gearCode} / ${lure} / HIT! (当:${tCount} / 通:${total})\n`;
             document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
             
             updateUI(); renderLures();
             if (window.navigator.vibrate) window.navigator.vibrate([20, 30]);
         }
-
 
 
 

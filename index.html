@@ -142,7 +142,6 @@
 
 
 
-// --- ここから差し替え ---
         async function sendToGas(data) {
             const url = "https://script.google.com/macros/s/AKfycbzB03jBYpGpDEWA8ki_1AdoI21v-n5x56u1pdrwoJYwB_-5VAJPZ__xZ9bkXGASsG4i9w/exec";
             try {
@@ -164,20 +163,26 @@
             todayStats[gearCode][lure] = (todayStats[gearCode][lure] || 0) + 1;
             stats[gearCode][lure] = (stats[gearCode][lure] || 0) + 1;
 
-            // --- GAS送信用のデータ作成と実行 ---
+            const tCount = Math.max(0, total - totalS); // 当日の匹数
             const now = new Date();
+            
+            // GAS送信用のデータ（当日と通算も送るように拡張！）
             const payload = {
                 date: `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')}`,
                 time: now.toLocaleTimeString(),
                 gear: gearCode,
-                lure: lure
+                lure: lure,
+                dayCount: tCount,   // 追加
+                totalCount: total   // 追加
             };
-            sendToGas(payload); 
-            // ---------------------------------
+            sendToGas(payload);
 
             save();
-            const log = `[${getFullTime()}] ${gearCode} / ${lure} / HIT!\n`;
+            
+            // --- ログ表示をリッチに！ ---
+            const log = `[${getFullTime()}] ${gearCode} / ${lure} / HIT! (当:${tCount} / 通:${total})\n`;
             document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
+            
             updateUI(); renderLures();
             if (window.navigator.vibrate) window.navigator.vibrate([20, 30]);
         }

@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-    <title>王禅寺LOG v5.6 Five-Slot-System</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>王禅寺LOG v5.8 Day-One-System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --recent: #ef4444; --lure: #065f46; --others: #475569; }
@@ -13,11 +14,10 @@
         .gear-btn { height: 75px; border-radius: 12px; border: 2px solid #334155; font-weight: 900; background: #1e293b; color: #fff; font-size: 28px; }
         .gear-btn.selected { background: var(--accent)!important; border-color: #fff; transform: scale(0.92); }
         
-        /* 5連スロットのスタイル */
         .lure-slot-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 12px; }
-        .slot-btn { height: 70px; border-radius: 10px; border: none; color: white; font-weight: 800; font-size: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        .slot-btn { height: 70px; border-radius: 10px; border: none; color: white; font-weight: 800; font-size: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; }
         .slot-btn small { font-size: 8px; opacity: 0.7; margin-top: 2px; }
-        .rank-recent { background: var(--recent); border: 2px solid #fca5a5; } /* 直近は赤で強調 */
+        .rank-recent { background: var(--recent); border: 2px solid #fca5a5; }
         .rank-1 { background: #b45309; }
         .rank-2, .rank-3 { background: var(--lure); }
         .rank-others { background: var(--others); }
@@ -25,34 +25,33 @@
         #history-panel { display: none; background: #1e293b; border-radius: 12px; padding: 10px; margin-bottom: 12px; border: 1px solid var(--others); }
         #log-display { width: 100%; height: 140px; background: #000; color: #4ade80; font-family: monospace; font-size: 11px; padding: 10px; overflow-y: auto; border-radius: 8px; margin-bottom: 12px; }
         .input-area { display: flex; gap: 8px; margin-bottom: 12px; padding: 8px; background: #1e293b; border-radius: 12px; }
-        input { flex: 1; height: 40px; border-radius: 8px; background: #0f172a; color: #fff; padding: 0 10px; }
+        input { flex: 1; height: 40px; border-radius: 8px; background: #0f172a; color: #fff; padding: 0 10px; border: 1px solid #334155; }
     </style>
 </head>
 <body>
     <div class="score-board p-3">
         <div class="text-3xl font-black text-blue-500" id="today-count">0</div>
-        <button onclick="editTotal()" class="text-[10px] text-slate-400 font-bold">通算: <span id="total-count">391</span> 匹</button>
+        <button onclick="editTotal()" class="text-[10px] text-slate-400 font-bold">2026通算: <span id="total-count">391</span> 匹</button>
     </div>
 
     <div class="grid-gear" id="gear-area">
-        <button onclick="selG(this,'V','１号機 Vanquish')" class="gear-btn">V</button>
-        <button onclick="selG(this,'S','５号機 STELLA')" class="gear-btn">S</button>
-        <button onclick="selG(this,'E','８号機 EXIST SF')" class="gear-btn">E</button>
-        <button onclick="selG(this,'T','９号機 Twin Power')" class="gear-btn">T</button>
-        <button onclick="selG(this,'A','１２号機 Airity ST SF')" class="gear-btn">A</button>
+        <button onclick="selG(this,'V','1号機 Vanquish')" class="gear-btn">V</button>
+        <button onclick="selG(this,'S','5号機 STELLA')" class="gear-btn">S</button>
+        <button onclick="selG(this,'E','8号機 EXIST SF')" class="gear-btn">E</button>
+        <button onclick="selG(this,'T','9号機 Twin Power')" class="gear-btn">T</button>
+        <button onclick="selG(this,'A','12号機 Airity ST')" class="gear-btn">A</button>
     </div>
 
     <div id="lure-label" class="text-center text-[9px] font-bold mb-2 text-blue-400">SELECT UNIT</div>
-
     <div class="lure-slot-grid" id="lure-area"></div>
 
     <div id="history-panel">
-        <div class="text-[10px] mb-2 text-slate-400 font-bold border-b border-slate-600 pb-1">LURE MASTER</div>
+        <div class="text-[10px] mb-2 text-slate-400 font-bold border-b border-slate-600 pb-1">LURE MASTER (ALL TIME)</div>
         <div class="grid grid-cols-3 gap-2" id="master-list"></div>
     </div>
 
     <div class="input-area">
-        <input type="text" id="lure-input" placeholder="New Lure..." onkeypress="if(event.key==='Enter')addL()">
+        <input type="text" id="lure-input" placeholder="Lure Name..." onkeypress="if(event.key==='Enter')addL()">
         <button onclick="addL()" class="w-12 h-10 bg-blue-600 rounded-lg font-bold">GET</button>
     </div>
 
@@ -70,7 +69,8 @@
         let totalS = parseInt(localStorage.getItem('oz-totalS')) || total;
         let gearCode = "";
         let recentLure = localStorage.getItem('oz-recent') || "";
-        let stats = JSON.parse(localStorage.getItem('oz-stats')) || {};
+        let stats = JSON.parse(localStorage.getItem('oz-stats')) || {}; // 通算
+        let todayStats = JSON.parse(localStorage.getItem('oz-todayStats')) || {}; // 当日
 
         function selG(e, code, full) {
             document.querySelectorAll('#gear-area button').forEach(b => b.classList.remove('selected'));
@@ -85,33 +85,36 @@
             const e = document.getElementById('lure-area');
             e.innerHTML = '';
             if (!gearCode) return;
+            if (!todayStats[gearCode]) todayStats[gearCode] = {};
             if (!stats[gearCode]) stats[gearCode] = {};
 
-            const sorted = Object.keys(stats[gearCode]).sort((a, b) => stats[gearCode][b] - stats[gearCode][a]);
-            
-            // 1. 直近 (Recent)
-            const rBtn = document.createElement('button');
-            rBtn.className = 'slot-btn rank-recent';
-            rBtn.innerHTML = recentLure ? `${recentLure}<small>RECENT</small>` : '-';
-            rBtn.onclick = () => recentLure && rec(recentLure);
-            e.appendChild(rBtn);
+            // 当日釣果順
+            let dailySorted = Object.keys(todayStats[gearCode]).sort((a, b) => todayStats[gearCode][b] - todayStats[gearCode][a]);
+            // 通算釣果順（予備用）
+            let totalSorted = Object.keys(stats[gearCode]).sort((a, b) => stats[gearCode][b] - stats[gearCode][a]);
 
-            // 2-4. 上位1, 2, 3位
+            // スロット1: RECENT
+            createSlot(e, recentLure, 'RECENT', 'rank-recent', () => recentLure && rec(recentLure));
+
+            // スロット2-4: 当日のTOP3 (いなければ通算)
             for (let i = 0; i < 3; i++) {
-                const lure = sorted[i];
-                const btn = document.createElement('button');
-                btn.className = `slot-btn rank-${i+1}`;
-                btn.innerHTML = lure ? `${lure}<small>${stats[gearCode][lure]} 🐟</small>` : '-';
-                if(lure) btn.onclick = () => rec(lure);
-                e.appendChild(btn);
+                let lure = dailySorted[i] || totalSorted[i] || "";
+                let isPreset = !dailySorted[i] && totalSorted[i];
+                let count = todayStats[gearCode][lure] || 0;
+                let label = isPreset ? "PRESET" : (count + " 🐟");
+                createSlot(e, lure, label, `rank-${i+1}`, () => lure && rec(lure));
             }
 
-            // 5. Others (Master)
-            const oBtn = document.createElement('button');
-            oBtn.className = 'slot-btn rank-others';
-            oBtn.innerHTML = `OTHERS<small>MASTER</small>`;
-            oBtn.onclick = toggleMaster;
-            e.appendChild(oBtn);
+            // スロット5: OTHERS
+            createSlot(e, 'OTHERS', 'MASTER', 'rank-others', toggleMaster);
+        }
+
+        function createSlot(parent, name, label, cls, clickFn) {
+            const b = document.createElement('button');
+            b.className = `slot-btn ${cls}`;
+            b.innerHTML = name ? `<span class="truncate w-full px-1">${name}</span><small>${label}</small>` : '-';
+            b.onclick = clickFn;
+            parent.appendChild(b);
         }
 
         function toggleMaster() {
@@ -119,35 +122,28 @@
             const list = document.getElementById('master-list');
             list.innerHTML = '';
             if (p.style.display === 'block') { p.style.display = 'none'; return; }
-            
             p.style.display = 'block';
-            // 釣果が多い順に並び替え
-            const allLures = Object.keys(stats[gearCode] || {}).sort((a, b) => stats[gearCode][b] - stats[gearCode][a]);
-            
-            allLures.forEach(l => {
+            const all = Object.keys(stats[gearCode] || {}).sort((a, b) => stats[gearCode][b] - stats[gearCode][a]);
+            all.forEach(l => {
                 const b = document.createElement('button');
-                // マスタのボタンも2段構成で可愛く！
-                b.className = 'bg-slate-700 p-2 rounded text-[10px] font-bold flex flex-col items-center justify-center border border-slate-600 active:scale-95';
-                b.innerHTML = `<span class="truncate w-full text-center">${l}</span><span class="text-[8px] text-blue-300 mt-1">${stats[gearCode][l]} 🐟</span>`;
+                b.className = 'bg-slate-700 p-2 rounded text-[10px] font-bold flex flex-col items-center border border-slate-600';
+                b.innerHTML = `<span class="truncate w-full text-center">${l}</span><span class="text-[8px] text-blue-300 mt-1">${stats[gearCode][l]}🐟</span>`;
                 b.onclick = () => { rec(l); p.style.display = 'none'; };
                 list.appendChild(b);
             });
         }
 
-
-
-        
-        function rec(lureName) {
+        function rec(lure) {
             if (!gearCode) return;
             total++;
-            recentLure = lureName;
-            stats[gearCode][lureName] = (stats[gearCode][lureName] || 0) + 1;
+            recentLure = lure;
+            if (!todayStats[gearCode]) todayStats[gearCode] = {};
+            todayStats[gearCode][lure] = (todayStats[gearCode][lure] || 0) + 1;
+            stats[gearCode][lure] = (stats[gearCode][lure] || 0) + 1;
             save();
-            const now = new Date();
-            const log = `[${now.toLocaleTimeString()}] ${gearCode} / ${lureName} / HIT!\n`;
+            const log = `[${new Date().toLocaleTimeString()}] ${gearCode} / ${lure} / HIT!\n`;
             document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
-            updateUI();
-            renderLures();
+            updateUI(); renderLures();
             if (window.navigator.vibrate) window.navigator.vibrate([20, 30]);
         }
 
@@ -163,6 +159,7 @@
 
         function save() {
             localStorage.setItem('oz-stats', JSON.stringify(stats));
+            localStorage.setItem('oz-todayStats', JSON.stringify(todayStats));
             localStorage.setItem('oz-total', total);
             localStorage.setItem('oz-totalS', totalS);
             localStorage.setItem('oz-recent', recentLure);
@@ -178,16 +175,39 @@
                     const p = n.split(' / ');
                     const g = p[0].split('] ')[1];
                     const l = p[1];
+                    if (todayStats[g] && todayStats[g][l] > 0) todayStats[g][l]--;
                     if (stats[g] && stats[g][l] > 0) stats[g][l]--;
                 }
                 e.innerText = t.join('\n') + (t.length > 0 ? '\n' : '');
                 save(); updateUI(); renderLures();
             }
         }
-        function resetToday() { if (confirm("本日リセット？")) { totalS = total; save(); updateUI(); } }
-        function editTotal() { const v = prompt("修正通算:", total); if (v) { const n = parseInt(v); totalS += (n - total); total = n; save(); updateUI(); } }
-        function copyLog() { navigator.clipboard.writeText(document.getElementById('log-display').innerText); alert("COPIED"); }
-        function addMemo() { const m = prompt("MEMO:"); if(m) { document.getElementById('log-display').innerText = `[${new Date().toLocaleTimeString()} MEMO] ${m}\n` + document.getElementById('log-display').innerText; } }
+
+        function resetToday() {
+            if (confirm("当日の釣果とランキングをリセットしますか？")) {
+                totalS = total; todayStats = {}; recentLure = "";
+                save(); updateUI(); renderLures();
+            }
+        }
+
+        function editTotal() {
+            const v = prompt("修正後の通算釣果:", total);
+            if (v) { const n = parseInt(v); totalS += (n - total); total = n; save(); updateUI(); }
+        }
+
+        function copyLog() {
+            navigator.clipboard.writeText(document.getElementById('log-display').innerText);
+            alert("LOG COPIED!");
+        }
+
+        function addMemo() {
+            const m = prompt("MEMO:");
+            if(m) {
+                const log = `[${new Date().toLocaleTimeString()} MEMO] ${m}\n`;
+                document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
+            }
+        }
+
         updateUI();
     </script>
 </body>

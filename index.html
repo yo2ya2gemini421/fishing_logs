@@ -3,39 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>王禅寺LOG v5.5 Meritocracy</title>
+    <title>王禅寺LOG v5.6 Five-Slot-System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --btn-bg: #1e293b; --undo: #7f1d1d; --lure: #065f46; --others: #475569; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; touch-action: manipulation; }
-        .score-board { margin-bottom: 15px; border: 1px solid #334155; padding: 15px; border-radius: 16px; background: #1e293b; text-align: center; }
-        .score-today { font-size: 32px; font-weight: 900; color: var(--accent); }
-        .grid-gear { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 15px; }
-        .gear-btn { height: 75px; border-radius: 12px; border: 2px solid #334155; font-weight: 900; background: var(--btn-bg); color: #fff; font-size: 28px; }
+        :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --recent: #ef4444; --lure: #065f46; --others: #475569; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); padding: 15px; touch-action: manipulation; }
+        .score-board { margin-bottom: 12px; border: 1px solid #334155; border-radius: 16px; background: #1e293b; text-align: center; }
+        .grid-gear { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px; }
+        .gear-btn { height: 75px; border-radius: 12px; border: 2px solid #334155; font-weight: 900; background: #1e293b; color: #fff; font-size: 28px; }
         .gear-btn.selected { background: var(--accent)!important; border-color: #fff; transform: scale(0.92); }
         
-        /* 4連スロットのスタイル */
-        .lure-slot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
-        .slot-btn { height: 65px; border-radius: 12px; border: none; color: white; font-weight: 800; font-size: 11px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.1s; position: relative; }
-        .slot-btn:active { transform: scale(0.95); }
-        .slot-btn small { font-size: 9px; opacity: 0.7; margin-top: 2px; }
-        .rank-1 { background: #b45309; border: 2px solid #fbbf24; } /* 1位は少しゴージャスに */
+        /* 5連スロットのスタイル */
+        .lure-slot-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 12px; }
+        .slot-btn { height: 70px; border-radius: 10px; border: none; color: white; font-weight: 800; font-size: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        .slot-btn small { font-size: 8px; opacity: 0.7; margin-top: 2px; }
+        .rank-recent { background: var(--recent); border: 2px solid #fca5a5; } /* 直近は赤で強調 */
+        .rank-1 { background: #b45309; }
         .rank-2, .rank-3 { background: var(--lure); }
         .rank-others { background: var(--others); }
 
-        #log-display { width: 100%; height: 160px; background: #000; color: #4ade80; font-family: monospace; font-size: 11px; padding: 12px; overflow-y: auto; border: 1px solid #334155; border-radius: 8px; margin-bottom: 15px; }
-        .input-area { display: flex; gap: 8px; margin-bottom: 15px; padding: 8px; background: #1e293b; border-radius: 12px; }
-        input { flex: 1; height: 45px; border-radius: 8px; background: #0f172a; color: #fff; padding: 0 12px; }
-        .add-btn { width: 70px; background: var(--accent); color: #fff; font-weight: 800; border-radius: 8px; }
+        #history-panel { display: none; background: #1e293b; border-radius: 12px; padding: 10px; margin-bottom: 12px; border: 1px solid var(--others); }
+        #log-display { width: 100%; height: 140px; background: #000; color: #4ade80; font-family: monospace; font-size: 11px; padding: 10px; overflow-y: auto; border-radius: 8px; margin-bottom: 12px; }
+        .input-area { display: flex; gap: 8px; margin-bottom: 12px; padding: 8px; background: #1e293b; border-radius: 12px; }
+        input { flex: 1; height: 40px; border-radius: 8px; background: #0f172a; color: #fff; padding: 0 10px; }
     </style>
 </head>
 <body>
-    <div class="score-board p-4">
-        <div class="score-today">本日の釣果: <span id="today-count">0</span> 匹</div>
-        <button onclick="editTotal()" class="text-[11px] text-slate-400 font-bold bg-slate-800 px-3 py-1 rounded-full">
-            通算: <span id="total-count">391</span> 匹
-        </button>
+    <div class="score-board p-3">
+        <div class="text-3xl font-black text-blue-500" id="today-count">0</div>
+        <button onclick="editTotal()" class="text-[10px] text-slate-400 font-bold">通算: <span id="total-count">391</span> 匹</button>
     </div>
 
     <div class="grid-gear" id="gear-area">
@@ -46,37 +42,42 @@
         <button onclick="selG(this,'A','１２号機 Airity ST SF')" class="gear-btn">A</button>
     </div>
 
-    <div id="lure-label" class="text-center text-[10px] font-bold mb-2 text-blue-400 tracking-tighter">SELECT UNIT</div>
+    <div id="lure-label" class="text-center text-[9px] font-bold mb-2 text-blue-400">SELECT UNIT</div>
 
     <div class="lure-slot-grid" id="lure-area"></div>
 
-    <div class="input-area" id="manual-input">
+    <div id="history-panel">
+        <div class="text-[10px] mb-2 text-slate-400 font-bold border-b border-slate-600 pb-1">LURE MASTER</div>
+        <div class="grid grid-cols-3 gap-2" id="master-list"></div>
+    </div>
+
+    <div class="input-area">
         <input type="text" id="lure-input" placeholder="New Lure..." onkeypress="if(event.key==='Enter')addL()">
-        <button id="send-btn" class="add-btn" onclick="addL()">GET</button>
+        <button onclick="addL()" class="w-12 h-10 bg-blue-600 rounded-lg font-bold">GET</button>
     </div>
 
     <div id="log-display"></div>
 
     <div class="grid grid-cols-4 gap-2">
-        <button onclick="undo()" class="h-10 rounded-lg bg-red-900 font-bold text-xs">UNDO</button>
-        <button onclick="resetToday()" class="h-10 rounded-lg bg-slate-700 font-bold text-xs">RESET</button>
-        <button onclick="copyLog()" class="h-10 rounded-lg bg-blue-700 font-bold text-xs">COPY</button>
-        <button onclick="addMemo()" class="h-10 rounded-lg bg-indigo-700 font-bold text-xs">MEMO</button>
+        <button onclick="undo()" class="h-10 rounded-lg bg-red-900 font-bold text-[10px]">UNDO</button>
+        <button onclick="resetToday()" class="h-10 rounded-lg bg-slate-700 font-bold text-[10px]">RESET</button>
+        <button onclick="copyLog()" class="h-10 rounded-lg bg-blue-700 font-bold text-[10px]">COPY</button>
+        <button onclick="addMemo()" class="h-10 rounded-lg bg-indigo-700 font-bold text-[10px]">MEMO</button>
     </div>
 
     <script>
         let total = parseInt(localStorage.getItem('oz-total')) || 391;
         let totalS = parseInt(localStorage.getItem('oz-totalS')) || total;
         let gearCode = "";
-        let gearFull = "";
+        let recentLure = localStorage.getItem('oz-recent') || "";
         let stats = JSON.parse(localStorage.getItem('oz-stats')) || {};
 
         function selG(e, code, full) {
             document.querySelectorAll('#gear-area button').forEach(b => b.classList.remove('selected'));
             e.classList.add('selected');
             gearCode = code;
-            gearFull = full;
             document.getElementById('lure-label').innerText = "⚡️ " + full;
+            document.getElementById('history-panel').style.display = 'none';
             renderLures();
         }
 
@@ -86,50 +87,59 @@
             if (!gearCode) return;
             if (!stats[gearCode]) stats[gearCode] = {};
 
-            // 釣果順にソート
             const sorted = Object.keys(stats[gearCode]).sort((a, b) => stats[gearCode][b] - stats[gearCode][a]);
             
-            // 上位3つを表示
+            // 1. 直近 (Recent)
+            const rBtn = document.createElement('button');
+            rBtn.className = 'slot-btn rank-recent';
+            rBtn.innerHTML = recentLure ? `${recentLure}<small>RECENT</small>` : '-';
+            rBtn.onclick = () => recentLure && rec(recentLure);
+            e.appendChild(rBtn);
+
+            // 2-4. 上位1, 2, 3位
             for (let i = 0; i < 3; i++) {
                 const lure = sorted[i];
                 const btn = document.createElement('button');
                 btn.className = `slot-btn rank-${i+1}`;
-                if (lure) {
-                    btn.innerHTML = `${lure}<small>${stats[gearCode][lure]} 🐟</small>`;
-                    btn.onclick = () => rec(lure);
-                } else {
-                    btn.innerHTML = `<span class="opacity-20">-</span>`;
-                    btn.disabled = true;
-                }
+                btn.innerHTML = lure ? `${lure}<small>${stats[gearCode][lure]} 🐟</small>` : '-';
+                if(lure) btn.onclick = () => rec(lure);
                 e.appendChild(btn);
             }
 
-            // 4つ目はOTHERSボタン
-            const others = document.createElement('button');
-            others.className = 'slot-btn rank-others';
-            others.innerHTML = `OTHERS<small>History</small>`;
-            others.onclick = () => document.getElementById('lure-input').focus();
-            e.appendChild(others);
+            // 5. Others (Master)
+            const oBtn = document.createElement('button');
+            oBtn.className = 'slot-btn rank-others';
+            oBtn.innerHTML = `OTHERS<small>MASTER</small>`;
+            oBtn.onclick = toggleMaster;
+            e.appendChild(oBtn);
+        }
+
+        function toggleMaster() {
+            const p = document.getElementById('history-panel');
+            const list = document.getElementById('master-list');
+            list.innerHTML = '';
+            if (p.style.display === 'block') { p.style.display = 'none'; return; }
+            
+            p.style.display = 'block';
+            const allLures = Object.keys(stats[gearCode] || {});
+            allLures.forEach(l => {
+                const b = document.createElement('button');
+                b.className = 'bg-slate-700 p-2 rounded text-[10px] font-bold truncate';
+                b.innerText = l;
+                b.onclick = () => { rec(l); p.style.display = 'none'; };
+                list.appendChild(b);
+            });
         }
 
         function rec(lureName) {
             if (!gearCode) return;
             total++;
+            recentLure = lureName;
             stats[gearCode][lureName] = (stats[gearCode][lureName] || 0) + 1;
             save();
-            
-            const t = document.getElementById('log-display');
             const now = new Date();
-            const timeStr = now.getHours().toString().padStart(2, '0') + ":" + 
-                            now.getMinutes().toString().padStart(2, '0') + ":" + 
-                            now.getSeconds().toString().padStart(2, '0');
-            
-            t.innerText = `[${timeStr}] ${gearCode} / ${lureName} / HIT!\n` + t.innerText;
-            
-            const btn = document.getElementById('send-btn');
-            btn.innerText = "OK!";
-            setTimeout(() => { btn.innerText = "GET"; }, 500);
-
+            const log = `[${now.toLocaleTimeString()}] ${gearCode} / ${lureName} / HIT!\n`;
+            document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
             updateUI();
             renderLures();
             if (window.navigator.vibrate) window.navigator.vibrate([20, 30]);
@@ -137,12 +147,7 @@
 
         function addL() {
             const i = document.getElementById('lure-input');
-            const l = i.value.trim();
-            if (l && gearCode) {
-                rec(l);
-                i.value = "";
-                i.blur();
-            }
+            if (i.value.trim() && gearCode) { rec(i.value.trim()); i.value = ""; i.blur(); }
         }
 
         function updateUI() {
@@ -154,6 +159,7 @@
             localStorage.setItem('oz-stats', JSON.stringify(stats));
             localStorage.setItem('oz-total', total);
             localStorage.setItem('oz-totalS', totalS);
+            localStorage.setItem('oz-recent', recentLure);
         }
 
         function undo() {
@@ -169,17 +175,13 @@
                     if (stats[g] && stats[g][l] > 0) stats[g][l]--;
                 }
                 e.innerText = t.join('\n') + (t.length > 0 ? '\n' : '');
-                save();
-                updateUI();
-                renderLures();
+                save(); updateUI(); renderLures();
             }
         }
-
-        function resetToday() { if (confirm("本日分をリセット？")) { totalS = total; save(); updateUI(); } }
-        function editTotal() { const v = prompt("修正後の通算:", total); if (v) { const n = parseInt(v); totalS += (n - total); total = n; save(); updateUI(); } }
+        function resetToday() { if (confirm("本日リセット？")) { totalS = total; save(); updateUI(); } }
+        function editTotal() { const v = prompt("修正通算:", total); if (v) { const n = parseInt(v); totalS += (n - total); total = n; save(); updateUI(); } }
         function copyLog() { navigator.clipboard.writeText(document.getElementById('log-display').innerText); alert("COPIED"); }
-        function addMemo() { const m = prompt("MEMO:"); if(m) { const now = new Date(); document.getElementById('log-display').innerText = `[${now.toLocaleTimeString()} MEMO] ${m}\n` + document.getElementById('log-display').innerText; } }
-
+        function addMemo() { const m = prompt("MEMO:"); if(m) { document.getElementById('log-display').innerText = `[${new Date().toLocaleTimeString()} MEMO] ${m}\n` + document.getElementById('log-display').innerText; } }
         updateUI();
     </script>
 </body>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>王禅寺LOG v1.4 Full-Timestamp</title>
+    <title>王禅寺LOG v1.6 Master-Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --recent: #ef4444; --lure: #065f46; --others: #475569; }
@@ -62,16 +62,35 @@
         <button onclick="addMemo()" class="h-10 rounded-lg bg-indigo-700 font-bold text-[10px]">MEMO</button>
     </div>
 
-
-
-
 <script>
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbx4gA69eRIEnPne0ovQEni9SioYncpiIwJjqkXLm3lzcnxrNFBrJLVajP5uNi4xHW4jkw/exec";
+
         let total = parseInt(localStorage.getItem('oz-total')) || 391;
         let totalS = parseInt(localStorage.getItem('oz-totalS')) || total;
         let gearCode = "";
         let recentStats = JSON.parse(localStorage.getItem('oz-recentStats')) || {};
         let stats = JSON.parse(localStorage.getItem('oz-stats')) || {};
         let todayStats = JSON.parse(localStorage.getItem('oz-todayStats')) || {};
+
+        // --- ★追加：スプレッドシートからマスタを読み込む ---
+        async function loadMasterFromSheet() {
+            try {
+                const response = await fetch(GAS_URL);
+                const remoteStats = await response.json();
+                if (remoteStats && Object.keys(remoteStats).length > 0) {
+                    stats = remoteStats;
+                    localStorage.setItem('oz-stats', JSON.stringify(stats));
+                    if(gearCode) renderLures(); 
+                    console.log("Master Synced from Sheet");
+                }
+            } catch (e) { console.error("Load failed", e); }
+        }
+
+        // ページ読み込み時に実行
+        window.onload = () => {
+            updateUI();
+            loadMasterFromSheet();
+        };
 
         function getFullTime() {
             const now = new Date();
@@ -110,187 +129,3 @@
                 let label = isPreset ? "PRESET" : (count + " 🐟");
                 createSlot(e, lure, label, `rank-${i+1}`, () => lure && rec(lure));
             }
-            createSlot(e, 'OTHERS', 'MASTER', 'rank-others', toggleMaster);
-        }
-
-        function createSlot(parent, name, label, cls, clickFn) {
-            const b = document.createElement('button');
-            b.className = `slot-btn ${cls}`;
-            b.innerHTML = name ? `<span class="truncate w-full px-1">${name}</span><small>${label}</small>` : '-';
-            b.onclick = clickFn;
-            parent.appendChild(b);
-        }
-
-        // --- アップデート：ルアー軸の全期間集計表示 ---
-        function toggleMaster() {
-            const p = document.getElementById('history-panel');
-            const list = document.getElementById('master-list');
-            list.innerHTML = '';
-            if (p.style.display === 'block') { p.style.display = 'none'; return; }
-            p.style.display = 'block';
-
-            // 全機体からルアーごとにデータを合算
-            let globalStats = {}; // 全期間累計
-            let globalToday = {}; // 今日累計
-
-            // stats（全期間）から集計
-            Object.keys(stats).forEach(g => {
-                Object.keys(stats[g]).forEach(l => {
-                    globalStats[l] = (globalStats[l] || 0) + stats[g][l];
-                });
-            });
-
-            // todayStats（今日）から集計
-            Object.keys(todayStats).forEach(g => {
-                Object.keys(todayStats[g]).forEach(l => {
-                    globalToday[l] = (globalToday[l] || 0) + todayStats[g][l];
-                });
-            });
-
-            // 累計数が多い順にソート
-            const allLures = Object.keys(globalStats).sort((a, b) => globalStats[b] - globalStats[a]);
-
-            allLures.forEach(l => {
-                const b = document.createElement('button');
-                const tCount = globalToday[l] || 0;
-                const totalCount = globalStats[l] || 0;
-
-                b.className = 'bg-slate-700 p-2 rounded text-[10px] font-bold flex flex-col items-center border border-slate-600';
-                // HTML構造：上段にルアー名、下段に今日(🐟)と累計(Σ)を表示
-                b.innerHTML = `
-                    <span class="truncate w-full text-center">${l}</span>
-                    <div class="flex gap-1 mt-1">
-                        <span class="${tCount > 0 ? 'text-cyan-400' : 'text-slate-400'} text-[8px]">${tCount}🐟</span>
-                        <span class="text-yellow-500 text-[8px] opacity-80">Σ${totalCount}</span>
-                    </div>
-                `;
-                b.onclick = () => { rec(l); p.style.display = 'none'; };
-                list.appendChild(b);
-            });
-        }
-
-        // --- 1. URLの定義（最新のURLに差し替え） ---
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbx4gA69eRIEnPne0ovQEni9SioYncpiIwJjqkXLm3lzcnxrNFBrJLVajP5uNi4xHW4jkw/exec";
-
-        // --- 2. 既存の sendToGas 関数（URL変数を使うように修正） ---
-        async function sendToGas(data) {
-            try {
-                fetch(GAS_URL, {
-                    method: "POST",
-                    mode: "no-cors",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(data)
-                });
-            } catch (e) { console.error("GAS送信失敗", e); }
-        }
-
-        function rec(lure) {
-            if (!gearCode) return;
-            total++;
-            recentStats[gearCode] = lure;
-            if (!todayStats[gearCode]) todayStats[gearCode] = {};
-            todayStats[gearCode][lure] = (todayStats[gearCode][lure] || 0) + 1;
-            if (!stats[gearCode]) stats[gearCode] = {}; // 未定義ガード
-            stats[gearCode][lure] = (stats[gearCode][lure] || 0) + 1;
-
-            const tCount = Math.max(0, total - totalS);
-            const now = new Date();
-            
-            const payload = {
-                date: `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')}`,
-                time: now.toLocaleTimeString(),
-                gear: gearCode,
-                lure: lure,
-                dayCount: tCount,
-                totalCount: total
-            };
-            
-            sendToGas(payload);
-            save();
-            
-            const log = `[${getFullTime()}] ${gearCode} / ${lure} / 当:${tCount} \n`;
-            document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
-            
-            updateUI(); renderLures();
-            if (window.navigator.vibrate) window.navigator.vibrate([20, 30]);
-        }
-
-        function addL() {
-            const i = document.getElementById('lure-input');
-            if (i.value.trim() && gearCode) { rec(i.value.trim()); i.value = ""; i.blur(); }
-        }
-
-        function updateUI() {
-            document.getElementById('today-count').innerText = Math.max(0, total - totalS);
-            document.getElementById('total-count').innerText = total;
-        }
-
-        function undo() {
-            const e = document.getElementById('log-display');
-            let t = e.innerText.trim().split('\n');
-            if (t.length > 0) {
-                const n = t.shift();
-                if (n.includes(' / ')) { // フォーマットに合わせて修正
-                    total = Math.max(0, total - 1);
-                    const p = n.split('] ')[1].split(' / ');
-                    const g = p[0];
-                    const l = p[1];
-                    if (todayStats[g] && todayStats[g][l] > 0) todayStats[g][l]--;
-                    if (stats[g] && stats[g][l] > 0) stats[g][l]--;
-                }
-                e.innerText = t.join('\n') + (t.length > 0 ? '\n' : '');
-                save(); updateUI(); renderLures();
-            }
-        }
-
-
-        function save() {
-            localStorage.setItem('oz-stats', JSON.stringify(stats));
-            localStorage.setItem('oz-todayStats', JSON.stringify(todayStats));
-            localStorage.setItem('oz-total', total);
-            localStorage.setItem('oz-totalS', totalS);
-            localStorage.setItem('oz-recentStats', JSON.stringify(recentStats));
-
-            // マスタ更新用のパケット
-            const masterPayload = {
-                type: "UPDATE_MASTER",
-                stats: stats
-            };
-            
-            // --- ここを修正！ ---
-            fetch(GAS_URL, {
-                method: "POST",
-                headers: {
-                    'Content-Type': 'text/plain', // JSONではなく敢えてtextにするのがGASのコツ
-                },
-                body: JSON.stringify(masterPayload)
-            })
-            .then(() => console.log("Master Synced!"))
-            .catch(e => console.error("Error:", e));
-        }
-
-        function editTotal() {
-            const v = prompt("通算修正:", total);
-            if (v) { const n = parseInt(v); totalS += (n - total); total = n; save(); updateUI(); }
-        }
-
-        function copyLog() { navigator.clipboard.writeText(document.getElementById('log-display').innerText); alert("COPIED!"); }
-        
-        function addMemo() {
-            const m = prompt("MEMO:");
-            if(m) {
-                const log = `[${getFullTime()} MEMO] ${m}\n`;
-                document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
-            }
-        }
-
-        updateUI();
-    </script>
-
-
-
-
-
-    
-</body>
-</html>

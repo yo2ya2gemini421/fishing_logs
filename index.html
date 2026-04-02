@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>王禅寺LOG v1.0 Full-Timestamp</title>
+    <title>王禅寺LOG v1.1 Full-Timestamp</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --recent: #ef4444; --lure: #065f46; --others: #475569; }
@@ -179,7 +179,7 @@
             save();
             
             // 画面表示用のログ（日時の後に改行 \n を入れる）
-            const log = `[${getFullTime()}]\n${gearCode} / ${lure} / 当:${tCount} \n`;
+            const log = `[${getFullTime()}] ${gearCode} / ${lure} / 当:${tCount} \n`;
             document.getElementById('log-display').innerText = log + document.getElementById('log-display').innerText;
             
             updateUI(); renderLures();

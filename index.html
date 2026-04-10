@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>王禅寺LOG v1.8 Master-Sync</title>
+    <title>王禅寺LOG v1.9 Master-Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --recent: #ef4444; --lure: #065f46; --others: #475569; }
@@ -71,44 +71,46 @@
         let recentStats = JSON.parse(localStorage.getItem('oz-recentStats')) || {};
         let stats = JSON.parse(localStorage.getItem('oz-stats')) || {};
         let todayStats = JSON.parse(localStorage.getItem('oz-todayStats')) || {};
-
+        let isNewSessionFlag = false; // 新しい釣行を開始するかの合図
 
 
 // --- スプレッドシートからマスタと最新通算を読み込む ---
-        async function loadMasterFromSheet() {
-            try {
-                const response = await fetch(GAS_URL);
-                const remoteData = await response.json();
-                
-                if (remoteData) {
-                    // 1. マスタデータ（ルアー統計）の同期
-                    if (remoteData.stats) {
-                        stats = remoteData.stats;
-                        localStorage.setItem('oz-stats', JSON.stringify(stats));
-                    }
-
-                    // 2. ★最新通算匹数の同期（GASから返ってきた total を使用）
-if (remoteData.total) {
-    const latestTotal = parseInt(remoteData.total);
-    
-    // 現在の「合計(total)」と「開始地点(totalS)」の両方を最新の通算に合わせる
-    // これで (total - totalS) が 0 になり、画面表示が 0匹 からスタートする
-    total = latestTotal;
-    totalS = latestTotal; 
-
-    localStorage.setItem('oz-total', total);
-    localStorage.setItem('oz-totalS', totalS);
-    
-    console.log(`最新通算をシートから同期: ${total}匹`);
-}
-                    
-                    if(gearCode) renderLures(); 
-                    updateUI(); // 画面表示を更新
-                }
-            } catch (e) { 
-                console.error("シートとの同期に失敗しました", e); 
+async function loadMasterFromSheet() {
+    try {
+        const response = await fetch(GAS_URL);
+        const remoteData = await response.json();
+        
+        if (remoteData) {
+            // 1. マスタデータの同期
+            if (remoteData.stats) {
+                stats = remoteData.stats;
+                localStorage.setItem('oz-stats', JSON.stringify(stats));
             }
+
+            // 2. 最新通算の同期
+            if (remoteData.total) {
+                total = parseInt(remoteData.total);
+                // セッション開始時の当日カウントを復元するため、
+                // 通算から「GASが計算した当日カウント」を引いて開始地点を特定する
+                totalS = total - (remoteData.dayCount || 0); 
+
+                localStorage.setItem('oz-total', total);
+                localStorage.setItem('oz-totalS', totalS);
+            }
+
+            // 3. ★【重要】ログ（緑文字）の復元
+            if (remoteData.logs && remoteData.logs.length > 0) {
+                // 配列を改行でつないで表示（GAS側で新しい順にしてある）
+                document.getElementById('log-display').innerText = remoteData.logs.join('\n') + '\n';
+            }
+            
+            if(gearCode) renderLures(); 
+            updateUI();
         }
+    } catch (e) { 
+        console.error("同期失敗", e); 
+    }
+}
 
         // ページ読み込み時に実行
         window.onload = loadMasterFromSheet;
@@ -234,6 +236,8 @@ if (remoteData.total) {
                 lure: lure,
                 dayCount: tCount,
                 totalCount: total
+                // ★ここを追加！GASに「新セッションかどうか」を伝える
+                isNewSession: isNewSessionFlag
             };
             
             sendToGas(payload);
@@ -313,35 +317,26 @@ if (remoteData.total) {
 
 
 function resetToday() {
-        if(confirm("【警告】ルアーリストと今日の釣果を完全に初期化しますか？\n（スプレッドシートから最新の状態を再取得します）")) {
-            
-            // 1. スマホ内の全データを一旦「空」にする（これが重要！）
-            stats = {}; 
-            todayStats = {};
-            recentStats = {};
-            
-            // 2. ローカルストレージも即座に空にする
-            localStorage.setItem('oz-stats', JSON.stringify(stats));
-            localStorage.setItem('oz-todayStats', JSON.stringify(todayStats));
-            localStorage.setItem('oz-recentStats', JSON.stringify(recentStats));
+    if(confirm("【警告】今日の釣果を初期化して、新しく数え直しますか？")) {
+        dayCount = 0;
+        todayStats = {};
+        recentStats = {};
+        
+        localStorage.setItem('oz-todayStats', JSON.stringify(todayStats));
+        localStorage.setItem('oz-recentStats', JSON.stringify(recentStats));
 
-            // 3. 通算カウントの開始地点を現在の合計に合わせる
-            totalS = total;
-            localStorage.setItem('oz-totalS', totalS);
-            
-            // 4. ログを消去
-            document.getElementById('log-display').innerText = "";
-            
-            // 5. ★真っさらな状態でシートから「今の正解」を読み込む
-            loadMasterFromSheet();
-            
-            // 6. 画面更新
-            updateUI();
-            renderLures();
-            
-            alert("大掃除完了！最新のマスタを読み込みました。");
-        }
+        totalS = total;
+        localStorage.setItem('oz-totalS', totalS);
+        
+        document.getElementById('log-display').innerText = "";
+        
+        // ★ここが重要！次に「HIT」を押した時に「新セッション」として送る合図
+        isNewSessionFlag = true; 
+        
+        updateUI();
+        renderLures();
     }
+}
     </script>
 </body>
 </html>

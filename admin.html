@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>王禅寺LOG Admin v1.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --glass: #1e293b; --border: #334155; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); padding: 15px; }
+        .admin-card { background: var(--glass); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); }
+        .input-field { background: var(--bg); border: 1px solid var(--border); color: #fff; border-radius: 10px; width: 100%; padding: 12px; outline: none; }
+        .input-field:focus { border-color: var(--accent); ring: 1px solid var(--accent); }
+        .btn-primary { background: var(--accent); font-weight: 900; border-radius: 12px; transition: all 0.2s; }
+        .btn-primary:active { transform: scale(0.95); opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <div class="max-w-md mx-auto">
+        <header class="mb-6 flex justify-between items-end">
+            <div>
+                <h1 class="text-xl font-black italic tracking-tighter text-blue-500">王禅寺LOG <span class="text-[10px] not-italic text-slate-500">ADMIN</span></h1>
+                <p class="text-[9px] font-bold text-slate-500 tracking-widest uppercase">Summary Archive System</p>
+            </div>
+            <div class="text-[10px] text-slate-500 font-mono" id="current-time"></div>
+        </header>
+
+        <div class="admin-card space-y-6">
+            <h2 class="text-xs font-black text-blue-400 uppercase tracking-wider flex items-center">
+                <span class="mr-2">📝</span> Summary Management
+            </h2>
+
+            <div>
+                <label class="block text-[10px] text-slate-500 font-bold mb-1 ml-1 uppercase">Fishing Date</label>
+                <input type="date" id="summary-date" class="input-field font-bold">
+            </div>
+
+            <div>
+                <label class="block text-[10px] text-slate-500 font-bold mb-1 ml-1 uppercase">Gemini Analysis (50,000 chars)</label>
+                <textarea id="summary-content" 
+                    class="input-field h-64 text-sm leading-relaxed" 
+                    placeholder="Geminiからのサマリーをペースト..."></textarea>
+            </div>
+
+            <button onclick="saveSummary()" id="save-btn" class="w-full py-4 btn-primary text-sm shadow-lg shadow-blue-500/20">
+                UPLOAD TO SUMMARY SHEET
+            </button>
+        </div>
+
+        <div class="mt-8 text-center">
+            <a href="index.html" class="text-[10px] font-bold text-slate-600 hover:text-blue-500 transition-colors uppercase tracking-widest">
+                ← Back to Field Master
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // ★ index.htmlと同じURLをここに！
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbx4gA69eRIEnPne0ovQEni9SioYncpiIwJjqkXLm3lzcnxrNFBrJLVajP5uNi4xHW4jkw/exec";
+
+        // 日付の初期値を今日に設定
+        document.getElementById('summary-date').valueAsDate = new Date();
+
+        async function saveSummary() {
+            const date = document.getElementById('summary-date').value;
+            const content = document.getElementById('summary-content').value;
+            const btn = document.getElementById('save-btn');
+
+            if (!date || !content) {
+                alert("日付とサマリーを入れてね！");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "UPLOADING...";
+
+            try {
+                // fetchの引数構成をindex.htmlに合わせつつ、typeを指定
+                await fetch(GAS_URL, {
+                    method: "POST",
+                    mode: "no-cors", // index.htmlの仕様に合わせる
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        type: "SAVE_SUMMARY",
+                        date: date,
+                        content: content
+                    })
+                });
+
+                alert("スプレッドシートのSummaryシートに保存依頼を送ったよ！\n(no-corsのため完了確認はシート側を見てね)");
+                document.getElementById('summary-content').value = "";
+            } catch (e) {
+                alert("送信に失敗したみたい…");
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "UPLOAD TO SUMMARY SHEET";
+            }
+        }
+
+        // 時刻表示
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('current-time').innerText = now.toLocaleTimeString();
+        }, 1000);
+    </script>
+</body>
+</html>

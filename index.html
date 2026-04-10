@@ -72,27 +72,48 @@
         let stats = JSON.parse(localStorage.getItem('oz-stats')) || {};
         let todayStats = JSON.parse(localStorage.getItem('oz-todayStats')) || {};
 
-        // --- ★追加：スプレッドシートからマスタを読み込む ---
+
+
+// --- スプレッドシートからマスタと最新通算を読み込む ---
         async function loadMasterFromSheet() {
             try {
                 const response = await fetch(GAS_URL);
-                const remoteStats = await response.json();
+                const remoteData = await response.json();
                 
-                if (remoteStats && Object.keys(remoteStats).length > 0) {
-                    // ★ここがゾンビ撃退の鍵！
-                    // スマホ側の古い stats を一度完全に空にしてから、シートのデータを入れる
-                    stats = remoteStats; 
-                    
-                    // ローカルストレージも「最新の正解」で上書き
-                    localStorage.setItem('oz-stats', JSON.stringify(stats));
+                if (remoteData) {
+                    // 1. マスタデータ（ルアー統計）の同期
+                    if (remoteData.stats) {
+                        stats = remoteData.stats;
+                        localStorage.setItem('oz-stats', JSON.stringify(stats));
+                    }
+
+                    // 2. ★最新通算匹数の同期（GASから返ってきた total を使用）
+                    if (remoteData.total) {
+                        const latestTotal = parseInt(remoteData.total);
+                        
+                        // 現在の「今日の釣果」を維持するため、開始地点(totalS)も調整
+                        const currentSessionCount = total - totalS; 
+                        total = latestTotal;
+                        totalS = total - currentSessionCount;
+
+                        localStorage.setItem('oz-total', total);
+                        localStorage.setItem('oz-totalS', totalS);
+                        
+                        console.log(`最新通算をシートから取得: ${total}匹`);
+                    }
                     
                     if(gearCode) renderLures(); 
-                    console.log("スプレッドシートを正解として同期完了！");
+                    updateUI(); // 画面表示を更新
                 }
             } catch (e) { 
-                console.error("シートが読めないのでローカルデータを使います", e); 
+                console.error("シートとの同期に失敗しました", e); 
             }
         }
+
+        // ページ読み込み時に実行
+        window.onload = loadMasterFromSheet;
+
+
 
         function getFullTime() {
             const now = new Date();

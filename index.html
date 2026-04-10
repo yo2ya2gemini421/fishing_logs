@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>王禅寺LOG v2.0 Recovery-Stable</title>
+    <title>王禅寺LOG v2.0.1 Fix-Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --recent: #ef4444; --lure: #065f46; --others: #475569; }
@@ -65,7 +65,7 @@
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbx4gA69eRIEnPne0ovQEni9SioYncpiIwJjqkXLm3lzcnxrNFBrJLVajP5uNi4xHW4jkw/exec";
 
-    let total = parseInt(localStorage.getItem('oz-total')) || 410;
+    let total = parseInt(localStorage.getItem('oz-total')) || 391;
     let totalS = parseInt(localStorage.getItem('oz-totalS')) || total;
     let gearCode = "";
     let recentStats = JSON.parse(localStorage.getItem('oz-recentStats')) || {};
@@ -73,9 +73,8 @@
     let todayStats = JSON.parse(localStorage.getItem('oz-todayStats')) || {};
     let isNewSessionFlag = false;
 
-    // --- 【修正】まずローカルで表示し、後からGASと同期する ---
     async function loadMasterFromSheet() {
-        updateUI(); // まず画面を出す
+        updateUI();
         try {
             const res = await fetch(GAS_URL);
             const data = await res.json();
@@ -90,19 +89,18 @@
                 updateUI();
                 if(gearCode) renderLures();
             }
-        } catch (e) { console.error("初期取得失敗:", e); }
+        } catch (e) { console.error("Sync error:", e); }
     }
 
     window.onload = loadMasterFromSheet;
 
-    // --- 通信処理（絶対に画面をロックさせない） ---
     function send(payload) {
         fetch(GAS_URL, {
             method: "POST",
             mode: "no-cors",
             headers: { "Content-Type": "text/plain" },
             body: JSON.stringify(payload)
-        }).catch(e => console.error("送信エラー:", e));
+        }).catch(e => console.error("Send error:", e));
     }
 
     function rec(lure) {
@@ -116,7 +114,6 @@
 
         const dayCount = Math.max(0, total - totalS);
         const now = new Date();
-        
         const logLine = `[${getFullTime()}] ${gearCode} / ${lure} / 当:${dayCount}\n`;
         document.getElementById('log-display').innerText = logLine + document.getElementById('log-display').innerText;
 
@@ -137,19 +134,16 @@
         if (window.navigator.vibrate) window.navigator.vibrate(20);
     }
 
-    // --- 【修正】RESET時にGAS同期を強制的に走り直させる ---
     async function resetToday() {
-        if(confirm("【警告】セッションを切り替えて最新データを再取得しますか？")) {
+        if(confirm("セッションを切り替えてリセットしますか？")) {
             todayStats = {};
             recentStats = {};
             totalS = total;
             isNewSessionFlag = true;
             saveLocally();
-            document.getElementById('log-display').innerText = "Syncing with GAS...\n";
+            document.getElementById('log-display').innerText = "Refreshing...\n";
             updateUI();
             renderLures();
-            
-            // RESETと同時に最新マスタを取得し直す
             await loadMasterFromSheet();
         }
     }
@@ -209,11 +203,23 @@
         p.style.display = 'block';
         const list = document.getElementById('master-list');
         list.innerHTML = '';
-        let gs = {};
-        Object.keys(stats).forEach(g => {
-            Object.keys(stats[g]).forEach(l => { gs[l] = (gs[l] || 0) + stats[g][l]; });
-        });
-        Object.keys(gs).sort((a,b) => gs[b] - gs[a]).forEach(l => {
+        
+        // 全機体のスタッツを正確にマージ
+        let globalStats = {};
+        for (const gear in stats) {
+            for (const lure in stats[gear]) {
+                globalStats[lure] = (globalStats[lure] || 0) + stats[gear][lure];
+            }
+        }
+
+        const sortedLures = Object.keys(globalStats).sort((a,b) => globalStats[b] - globalStats[a]);
+        
+        if (sortedLures.length === 0) {
+            list.innerHTML = '<div class="col-span-3 text-center text-xs py-4 text-slate-500">NO DATA</div>';
+            return;
+        }
+
+        sortedLures.forEach(l => {
             const b = document.createElement('button');
             b.className = 'bg-slate-700 p-2 rounded text-[10px] truncate';
             b.innerText = l;
@@ -253,8 +259,8 @@
     function addMemo() {
         const m = prompt("MEMO:");
         if(m) {
-            const logStr = `[${getFullTime()} MEMO] ${m}\n`;
-            document.getElementById('log-display').innerText = logStr + document.getElementById('log-display').innerText;
+            const logS = `[${getFullTime()} MEMO] ${m}\n`;
+            document.getElementById('log-display').innerText = logS + document.getElementById('log-display').innerText;
         }
     }
     function getFullTime() {

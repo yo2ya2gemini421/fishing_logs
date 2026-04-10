@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <title>王禅寺LOG Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --bg: #0f172a; --accent: #3b82f6; --glass: #1e293b; }
+        body { background: var(--bg); color: #f8fafc; font-family: sans-serif; }
+        .menu-btn { 
+            background: var(--glass); border: 1px solid #334155; 
+            border-radius: 16px; transition: all 0.2s;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 120px;
+        }
+        .menu-btn:active { transform: scale(0.95); background: #334155; }
+        .menu-btn i { font-size: 24px; margin-bottom: 8px; }
+    </style>
+</head>
+<body class="p-6">
+    <header class="text-center mb-10">
+        <h1 class="text-3xl font-black italic tracking-tighter text-blue-500">王禅寺LOG</h1>
+        <p class="text-[10px] font-bold text-slate-500 tracking-[.3em] uppercase mt-1 text-center">Tactical Fishing OS</p>
+    </header>
+
+    <div class="grid grid-cols-2 gap-4 max-w-sm mx-auto">
+        <a href="index.html" class="menu-btn shadow-lg">
+            <span class="text-2xl mb-2">🎣</span>
+            <span class="font-black text-sm">FIELD MASTER</span>
+            <span class="text-[8px] text-slate-400 mt-1">実釣ログ入力</span>
+        </a>
+
+        <a href="admin.html" class="menu-btn shadow-lg">
+            <span class="text-2xl mb-2">⚙️</span>
+            <span class="font-black text-sm">ADMIN</span>
+            <span class="text-[8px] text-slate-400 mt-1">サマリー保存</span>
+        </a>
+
+        <a href="#" class="menu-btn opacity-50">
+            <span class="text-2xl mb-2">📊</span>
+            <span class="font-black text-sm">ANALYTICS</span>
+            <span class="text-[8px] text-slate-400 mt-1">過去ログ参照 (Ready...)</span>
+        </a>
+
+        <a href="#" class="menu-btn opacity-50">
+            <span class="text-2xl mb-2">📦</span>
+            <span class="font-black text-sm">MASTER DB</span>
+            <span class="text-[8px] text-slate-400 mt-1">装備・戦力管理</span>
+        </a>
+    </div>
+
+    <footer class="mt-20 text-center">
+        <p class="text-[10px] text-slate-600 font-mono">2026 SYSTEM OPERATED BY YO-CHAN</p>
+    </footer>
+</body>
+</html>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>王禅寺LOG v2.0.1 Fix-Master</title>
+    <title>王禅寺LOG v2.1 Final-Repair</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root { --bg: #0f172a; --text: #f8fafc; --accent: #3b82f6; --recent: #ef4444; --lure: #065f46; --others: #475569; }
@@ -65,7 +65,8 @@
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbx4gA69eRIEnPne0ovQEni9SioYncpiIwJjqkXLm3lzcnxrNFBrJLVajP5uNi4xHW4jkw/exec";
 
-    let total = parseInt(localStorage.getItem('oz-total')) || 391;
+    // --- 初期データ（最悪ここに戻る） ---
+    let total = parseInt(localStorage.getItem('oz-total')) || 532;
     let totalS = parseInt(localStorage.getItem('oz-totalS')) || total;
     let gearCode = "";
     let recentStats = JSON.parse(localStorage.getItem('oz-recentStats')) || {};
@@ -73,18 +74,22 @@
     let todayStats = JSON.parse(localStorage.getItem('oz-todayStats')) || {};
     let isNewSessionFlag = false;
 
-    async function loadMasterFromSheet() {
+    // --- 起動時にローカルデータを優先表示 ---
+    window.onload = () => {
         updateUI();
+        syncWithGas();
+    };
+
+    async function syncWithGas() {
         try {
             const res = await fetch(GAS_URL);
             const data = await res.json();
             if (data) {
-                if (data.stats) stats = data.stats;
-                if (data.total) {
-                    total = parseInt(data.total);
-                    totalS = total - (data.dayCount || 0);
-                }
-                if (data.logs) document.getElementById('log-display').innerText = data.logs.join('\n') + '\n';
+                // 取得したデータが空でなければマージする
+                if (data.stats && Object.keys(data.stats).length > 0) stats = data.stats;
+                if (data.total) total = parseInt(data.total);
+                if (data.dayCount !== undefined) totalS = total - data.dayCount;
+                
                 saveLocally();
                 updateUI();
                 if(gearCode) renderLures();
@@ -92,15 +97,13 @@
         } catch (e) { console.error("Sync error:", e); }
     }
 
-    window.onload = loadMasterFromSheet;
-
     function send(payload) {
         fetch(GAS_URL, {
             method: "POST",
             mode: "no-cors",
             headers: { "Content-Type": "text/plain" },
             body: JSON.stringify(payload)
-        }).catch(e => console.error("Send error:", e));
+        });
     }
 
     function rec(lure) {
@@ -112,15 +115,14 @@
         if (!stats[gearCode]) stats[gearCode] = {}; 
         stats[gearCode][lure] = (stats[gearCode][lure] || 0) + 1;
 
-        const dayCount = Math.max(0, total - totalS);
-        const now = new Date();
-        const logLine = `[${getFullTime()}] ${gearCode} / ${lure} / 当:${dayCount}\n`;
+        const dCount = Math.max(0, total - totalS);
+        const logLine = `[${getFullTime()}] ${gearCode} / ${lure} / 当:${dCount}\n`;
         document.getElementById('log-display').innerText = logLine + document.getElementById('log-display').innerText;
 
         send({
             type: "HIT",
-            date: `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2,'0')}/${now.getDate().toString().padStart(2,'0')}`,
-            time: now.toLocaleTimeString('ja-JP', { hour12: false }),
+            date: new Date().toLocaleDateString('ja-JP'),
+            time: new Date().toLocaleTimeString('ja-JP', { hour12: false }),
             gear: gearCode,
             lure: lure,
             isNewSession: isNewSessionFlag,
@@ -134,17 +136,17 @@
         if (window.navigator.vibrate) window.navigator.vibrate(20);
     }
 
-    async function resetToday() {
-        if(confirm("セッションを切り替えてリセットしますか？")) {
+    function resetToday() {
+        if(confirm("セッションを切り替えますか？")) {
             todayStats = {};
             recentStats = {};
             totalS = total;
             isNewSessionFlag = true;
             saveLocally();
-            document.getElementById('log-display').innerText = "Refreshing...\n";
+            document.getElementById('log-display').innerText = "";
             updateUI();
             renderLures();
-            await loadMasterFromSheet();
+            syncWithGas();
         }
     }
 
@@ -204,28 +206,24 @@
         const list = document.getElementById('master-list');
         list.innerHTML = '';
         
-        // 全機体のスタッツを正確にマージ
-        let globalStats = {};
-        for (const gear in stats) {
-            for (const lure in stats[gear]) {
-                globalStats[lure] = (globalStats[lure] || 0) + stats[gear][lure];
+        let gs = {};
+        for (const g in stats) {
+            for (const l in stats[g]) {
+                gs[l] = (gs[l] || 0) + stats[g][l];
             }
         }
-
-        const sortedLures = Object.keys(globalStats).sort((a,b) => globalStats[b] - globalStats[a]);
-        
-        if (sortedLures.length === 0) {
-            list.innerHTML = '<div class="col-span-3 text-center text-xs py-4 text-slate-500">NO DATA</div>';
-            return;
+        const sorted = Object.keys(gs).sort((a,b) => gs[b] - gs[a]);
+        if (sorted.length === 0) {
+            list.innerHTML = '<div class="col-span-3 text-center text-xs text-slate-500">No Master Data</div>';
+        } else {
+            sorted.forEach(l => {
+                const b = document.createElement('button');
+                b.className = 'bg-slate-700 p-2 rounded text-[10px] truncate';
+                b.innerText = l;
+                b.onclick = () => { rec(l); p.style.display = 'none'; };
+                list.appendChild(b);
+            });
         }
-
-        sortedLures.forEach(l => {
-            const b = document.createElement('button');
-            b.className = 'bg-slate-700 p-2 rounded text-[10px] truncate';
-            b.innerText = l;
-            b.onclick = () => { rec(l); p.style.display = 'none'; };
-            list.appendChild(b);
-        });
     }
 
     function addL() {
@@ -259,13 +257,19 @@
     function addMemo() {
         const m = prompt("MEMO:");
         if(m) {
-            const logS = `[${getFullTime()} MEMO] ${m}\n`;
-            document.getElementById('log-display').innerText = logS + document.getElementById('log-display').innerText;
+            const logStr = `[${getFullTime()} MEMO] ${m}\n`;
+            document.getElementById('log-display').innerText = logStr + document.getElementById('log-display').innerText;
         }
     }
     function getFullTime() {
         const n = new Date();
-        return `${n.getFullYear()}/${(n.getMonth()+1).toString().padStart(2,'0')}/${n.getDate().toString().padStart(2,'0')} ${n.getHours().toString().padStart(2,'0')}:${n.getMinutes().toString().padStart(2,'0')}:${n.getSeconds().toString().padStart(2,'0')}`;
+        const y = n.getFullYear();
+        const mo = (n.getMonth()+1).toString().padStart(2,'0');
+        const d = n.getDate().toString().padStart(2,'0');
+        const h = n.getHours().toString().padStart(2,'0');
+        const mi = n.getMinutes().toString().padStart(2,'0');
+        const s = n.getSeconds().toString().padStart(2,'0');
+        return `${y}/${mo}/${d} ${h}:${mi}:${s}`;
     }
 </script>
 </body>
